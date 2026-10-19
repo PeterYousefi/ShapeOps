@@ -21,3 +21,9 @@ The user rejected the original dark dashboard and explicitly selected a light, c
 The user reiterated **well over 80 meaningful commits** for the full project. This target is outstanding. The redesign is a cohesive UI milestone, not completion of the entire production contract. Do not manufacture history to reach the target.
 
 Final local redesign verification: 17 backend tests; 4 Chromium tests (27.5s); zero axe violations across six light screens; TypeScript/Vite build and formatting checks pass. Real screenshots inspected and corrected at desktop/mobile sizes, with extra tablet checks. PR #4 contains the redesign. Hosted checks are independent and are not assumed to pass from local results.
+
+## Inference Studio refinement
+
+Preserved the light lab identity and refined Studio in place. Actual-vertex perspective silhouette fitting replaces fixed camera offsets. A compact header gives more room to CAD. Selected surfaces have amber fill, visible occluded boundaries and explicit focus/navigation. Actual class breakdowns, per-face primary probabilities and alternate estimator confidence support stable/candidate layer toggling, disagreement highlighting and next-changed-face navigation. Metadata remains available in a disclosure. Previous successful CAD remains visible on processing/error, while empty/screening/upload labels reflect actual state.
+
+Verified: 18 backend tests (52.41s), all 10 Playwright tests (51.6s: six browser workflows and four camera tests), TypeScript/Vite build, Ruff and MyPy. Real sample and uploaded STEP geometry were exercised; before/after desktop/mobile and processing/error/comparison screenshots were inspected. No Azure deployment. Build emits a nonblocking Three.js chunk-size advisory.

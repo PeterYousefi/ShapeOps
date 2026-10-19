@@ -28,3 +28,9 @@ Compact persistent navigation; full mobile drawer; bounded content with generous
 ## Data integrity
 
 All operational data remains API-backed. Samples are labeled. Registry stage is not presented as a production deployment. Missing promotion history remains empty. Procedural evaluation and drift limitations stay visible. No fabricated release dates, trends, confidence or service traffic.
+
+## Inference Studio refinement
+
+Preserve the existing palette and typography. Studio uses a compact title and a single input toolbar above the working surface. Camera framing fits actual tessellated vertices to the perspective frustum, centers the projected silhouette and preserves zoom/orbit state across selection and layer changes. Portrait resize scales framing without resetting user orientation. Amber face fill and through-occlusion boundary lines identify selected geometry; explicit face focus reveals reverse surfaces.
+
+The inspector shows actual face-count class breakdowns, mean probabilities, confidence bins, selected-face properties and optional class probabilities. Request metadata is available in a disclosure rather than dominating the panel. Comparison uses the same geometry and camera for primary/alternate prediction layers, plus a disagreement view and next-changed-face navigation. Empty/loading/error states must retain prior successful results without labeling absent CAD as uploaded or absent screening as successful.
