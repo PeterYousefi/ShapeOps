@@ -12,7 +12,8 @@
     "ruff": "passed",
     "mypy": "passed",
     "accessibility": "zero targeted axe violations across six app screens, selected-face comparison and unsupported-file states",
-    "fullscreen": "Separate Chromium check passed: full viewport dimensions, reset and exit"
+    "fullscreen": "Separate Chromium check passed: full viewport dimensions, reset and exit",
+    "final_mobile_alignment": "Title/export alignment and all-screen mobile workflow passed after final CSS refinement (8.5s)"
   },
   "actual_geometry": [
     "bracket",

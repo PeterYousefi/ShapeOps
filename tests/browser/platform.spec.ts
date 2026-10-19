@@ -179,6 +179,20 @@ test("mobile all screens, navigation, viewport and upload controls", async ({
     );
     expect(overflow, `overflow on ${name}`).toBe(false);
     if (name === "Inference Studio") {
+      const title = await page
+        .getByRole("heading", { name, exact: true })
+        .boundingBox();
+      const exportButton = await page
+        .getByRole("button", { name: "Export report", exact: true })
+        .boundingBox();
+      expect(
+        Math.abs(
+          title!.y +
+            title!.height / 2 -
+            exportButton!.y -
+            exportButton!.height / 2,
+        ),
+      ).toBeLessThan(12);
       await page.getByRole("button", { name: "Face 002", exact: true }).click();
       await expect(page.getByText("face:1", { exact: true })).toBeVisible();
       await page.evaluate(() => window.scrollTo(0, 0));
