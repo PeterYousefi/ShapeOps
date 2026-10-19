@@ -848,3 +848,68 @@ td {
   z-index: 2;
   backdrop-filter: none;
 }
+/* Explicit artifact inspector rows keep metadata aligned without empty grid tracks. */
+.model-card > .eyebrow {
+  grid-row: 2;
+}
+.model-card > h2 {
+  grid-row: 3;
+}
+.model-card > p {
+  grid-row: 4;
+}
+.model-card > .data-note {
+  grid-row: 5;
+  align-self: start;
+}
+.model-card > .model-metrics {
+  grid-row: 2/5;
+  margin: 0 0 18px;
+}
+.model-card > dl {
+  grid-row: 5;
+  margin: 0;
+}
+.model-card-actions {
+  grid-row: 6;
+}
+.model-card dl > div,
+.inspector dl > div {
+  margin: 0;
+  padding: 9px 0;
+}
+.promotion-history > .section-title,
+.lab-event-stream > .section-title {
+  padding: 20px 24px;
+  margin: 0;
+  border-bottom: 1px solid var(--line);
+}
+.walkthrough-card:after,
+.walkthrough-card:before {
+  display: none;
+}
+@media (max-width: 700px) {
+  .model-card > .model-metrics {
+    margin: 20px 0;
+  }
+}
+.lab-monitoring-zones {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+.lab-monitoring-zones .lab-group-title {
+  margin-top: 0;
+}
+.lab-monitoring-zones .panel {
+  min-height: 310px;
+}
+.lab-monitoring-zones .data-note {
+  margin: 18px 20px;
+}
+@media (max-width: 900px) {
+  .lab-monitoring-zones {
+    grid-template-columns: 1fr;
+  }
+}

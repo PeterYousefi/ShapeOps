@@ -1684,9 +1684,7 @@ function App() {
                   color="amber"
                 />
               </div>
-              <h2 className="lab-group-title">
-                01 / SERVICE HEALTH & MODEL BEHAVIOR
-              </h2>
+              <h2 className="lab-group-title">01 / SERVICE HEALTH</h2>
               <div className="observability-grid">
                 <section className="panel">
                   <div className="panel-header">
@@ -1703,86 +1701,6 @@ function App() {
                   <div className="panel-foot">
                     End-to-end inference latency · sample CAD preprocessing is
                     cached
-                  </div>
-                </section>
-                <section className="panel distribution-panel">
-                  <div className="panel-header">
-                    <div className="panel-title">
-                      <Cpu size={16} />
-                      <h2>Model · confidence distribution</h2>
-                    </div>
-                  </div>
-                  <div className="bar-chart">
-                    {["0–50%", "50–70%", "70–85%", "85–95%", "95–100%"].map(
-                      (label, i) => {
-                        const edges = [0, 0.5, 0.7, 0.85, 0.95, 1.001];
-                        const count = telemetry.requests.filter(
-                          (r) =>
-                            r.success &&
-                            r.confidence >= edges[i] &&
-                            r.confidence < edges[i + 1],
-                        ).length;
-                        return (
-                          <div key={label}>
-                            <span>{label}</span>
-                            <div>
-                              <i
-                                style={{
-                                  width: `${telemetry.successful ? (count / telemetry.successful) * 100 : 0}%`,
-                                }}
-                              />
-                            </div>
-                            <b>{count}</b>
-                          </div>
-                        );
-                      },
-                    )}
-                  </div>
-                  <div className="data-note">
-                    <Info size={13} />
-                    Per-request mean probability. Uncalibrated classifier
-                    confidence.
-                  </div>
-                </section>
-                <section className="panel">
-                  <div className="panel-header">
-                    <div className="panel-title">
-                      <FileBox size={16} />
-                      <h2>Data distribution & drift screening</h2>
-                    </div>
-                  </div>
-                  <div className="data-quality">
-                    <div>
-                      <span>Latest face count</span>
-                      <strong>{result?.face_count || "—"}</strong>
-                    </div>
-                    <div>
-                      <span>Latest edge count</span>
-                      <strong>{result?.edge_count || "—"}</strong>
-                    </div>
-                    <div>
-                      <span>Reference status</span>
-                      <Badge tone={result?.ood ? "amber" : "green"}>
-                        {result?.ood ? "Outside reference" : "Within reference"}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="distribution-contributors">
-                    <span className="eyebrow">
-                      LATEST INPUT · DEVIATION FROM REFERENCE MEAN
-                    </span>
-                    {result?.ood_contributions.slice(0, 3).map((c) => (
-                      <div key={c.feature}>
-                        <span>{c.feature}</span>
-                        <strong>{c.deviation}%</strong>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="data-note">
-                    <Info size={13} />
-                    Isolation Forest trained on perturbed descriptors of five
-                    procedural sample solids. Industrial drift validity is
-                    unestablished.
                   </div>
                 </section>
                 <section className="panel">
@@ -1852,6 +1770,98 @@ function App() {
                     </a>
                   </div>
                 </section>
+              </div>
+              <div className="lab-monitoring-zones">
+                <div>
+                  <h2 className="lab-group-title">02 / MODEL BEHAVIOR</h2>
+                  <section className="panel distribution-panel">
+                    <div className="panel-header">
+                      <div className="panel-title">
+                        <Cpu size={16} />
+                        <h2>Model · confidence distribution</h2>
+                      </div>
+                    </div>
+                    <div className="bar-chart">
+                      {["0–50%", "50–70%", "70–85%", "85–95%", "95–100%"].map(
+                        (label, i) => {
+                          const edges = [0, 0.5, 0.7, 0.85, 0.95, 1.001];
+                          const count = telemetry.requests.filter(
+                            (r) =>
+                              r.success &&
+                              r.confidence >= edges[i] &&
+                              r.confidence < edges[i + 1],
+                          ).length;
+                          return (
+                            <div key={label}>
+                              <span>{label}</span>
+                              <div>
+                                <i
+                                  style={{
+                                    width: `${telemetry.successful ? (count / telemetry.successful) * 100 : 0}%`,
+                                  }}
+                                />
+                              </div>
+                              <b>{count}</b>
+                            </div>
+                          );
+                        },
+                      )}
+                    </div>
+                    <div className="data-note">
+                      <Info size={13} />
+                      Per-request mean probability. Uncalibrated classifier
+                      confidence.
+                    </div>
+                  </section>
+                </div>
+                <div>
+                  <h2 className="lab-group-title">
+                    03 / DATA DISTRIBUTION & DRIFT
+                  </h2>
+                  <section className="panel">
+                    <div className="panel-header">
+                      <div className="panel-title">
+                        <FileBox size={16} />
+                        <h2>Data distribution & drift screening</h2>
+                      </div>
+                    </div>
+                    <div className="data-quality">
+                      <div>
+                        <span>Latest face count</span>
+                        <strong>{result?.face_count || "—"}</strong>
+                      </div>
+                      <div>
+                        <span>Latest edge count</span>
+                        <strong>{result?.edge_count || "—"}</strong>
+                      </div>
+                      <div>
+                        <span>Reference status</span>
+                        <Badge tone={result?.ood ? "amber" : "green"}>
+                          {result?.ood
+                            ? "Outside reference"
+                            : "Within reference"}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="distribution-contributors">
+                      <span className="eyebrow">
+                        LATEST INPUT · DEVIATION FROM REFERENCE MEAN
+                      </span>
+                      {result?.ood_contributions.slice(0, 3).map((c) => (
+                        <div key={c.feature}>
+                          <span>{c.feature}</span>
+                          <strong>{c.deviation}%</strong>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="data-note">
+                      <Info size={13} />
+                      Isolation Forest trained on perturbed descriptors of five
+                      procedural sample solids. Industrial drift validity is
+                      unestablished.
+                    </div>
+                  </section>
+                </div>
               </div>
               <section className="panel recent-panel">
                 <div className="panel-header">
