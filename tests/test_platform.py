@@ -64,6 +64,12 @@ def test_inference_depends_on_input_and_models_are_distinct(client):
     assert a["checksum"] != b["checksum"]
     assert all(f["candidate"] is not None for f in a["faces"])
     assert sum(f["disagreement"] for f in a["faces"]) == a["disagreements"]
+    for face in a["faces"]:
+        assert sum(face["probabilities"].values()) == pytest.approx(1)
+        assert max(face["probabilities"], key=face["probabilities"].get) == face["prediction"]
+        assert face["probabilities"][face["prediction"]] == pytest.approx(face["confidence"])
+        assert 0 <= face["comparison_confidence"] <= 1
+    assert all(f["comparison_confidence"] is None for f in b["faces"])
 
 
 def test_invalid_and_oversized_uploads_record_failures(client):
@@ -196,3 +202,15 @@ def test_chunked_transport_limit():
             )
         )
     assert getattr(exc.value, "status_code", None) == 413 and rejected == [True]
+
+
+def test_comparison_confidence_matches_other_estimator(client):
+    stable = client.post("/api/inference/sample", json={"sample": "manifold", "compare": True}).json()
+    candidate = client.post("/api/inference/sample", json={"sample": "manifold", "model": "surface-et-v2", "compare": True}).json()
+    assert stable["comparison_model"] == candidate["model"]
+    for left, right in zip(stable["faces"], candidate["faces"]):
+        assert left["id"] == right["id"]
+        assert left["candidate"] == right["prediction"]
+        assert right["candidate"] == left["prediction"]
+        assert left["comparison_confidence"] == pytest.approx(right["confidence"])
+        assert right["comparison_confidence"] == pytest.approx(left["confidence"])

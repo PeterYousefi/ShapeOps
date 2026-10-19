@@ -147,10 +147,22 @@ def infer(geometry, model, compare, trace, name, source, started, parse_ms):
     probabilities = estimator.predict_proba(x)
     pred = estimator.classes_[probabilities.argmax(axis=1)]
     alternate = "surface-et-v2" if model == "surface-rf-v1" else "surface-rf-v1"
-    other = app.state.models[alternate].predict(x) if compare else None
+    alternate_estimator = app.state.models[alternate] if compare else None
+    alternate_probabilities = alternate_estimator.predict_proba(x) if compare else None
+    other = (
+        alternate_estimator.classes_[alternate_probabilities.argmax(axis=1)]
+        if compare else None
+    )
     for i, f in enumerate(geometry["faces"]):
         f["prediction"] = str(pred[i])
         f["confidence"] = float(probabilities[i].max())
+        f["probabilities"] = {
+            str(label): float(value)
+            for label, value in zip(estimator.classes_, probabilities[i])
+        }
+        f["comparison_confidence"] = (
+            float(alternate_probabilities[i].max()) if compare else None
+        )
         f["candidate"] = str(other[i]) if other is not None else None
         f["disagreement"] = bool(other[i] != pred[i]) if other is not None else False
         f.pop("features", None)

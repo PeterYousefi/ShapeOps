@@ -3,6 +3,8 @@ export type Face = {
   surface: string;
   prediction: string;
   confidence: number;
+  probabilities?: Record<string, number>;
+  comparison_confidence?: number | null;
   area: number;
   edges: number;
   positions: number[];
