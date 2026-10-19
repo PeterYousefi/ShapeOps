@@ -6,7 +6,7 @@ Assets: private CAD contents, model artifacts, runtime integrity, telemetry, rel
 | --- | --- | --- |
 | Filename traversal / HTML injection | Fixed temporary internal filename; React escapes display text; raw filenames excluded from logs | No uploaded-file public serving |
 | Invalid/malicious STEP | Extension/header checks, OpenCascade solid validation, face/extent/tessellation limits, subprocess timeout, concurrency bound | Native libraries may contain vulnerabilities; stronger OS sandbox and memory enforcement required |
-| Oversized upload | 10 MB read limit and immediate rejection after bounded file read | Multipart framework can spool larger bodies before route validation; require reverse-proxy/ASGI body cap before public exposure |
+| Oversized upload | 10 MB file-read limit plus pre-multipart transport cap (bounded 64 KB envelope); content-length and chunked-body tests | Reverse-proxy request/connection limits still recommended before public exposure |
 | Resource exhaustion | 20 inference/drill requests per minute per local client address; at most two active processing slots; bounded child runtime | In-memory rate state is not distributed; queue/body caps and worker resource limits remain production work |
 | Raw-data leakage | TemporaryDirectory cleanup after success/failure/timeout; no contents or filenames in telemetry | Do not enable request-body logging; enforce infrastructure temporary-storage controls |
 | Unauthorized production action | Promotion always denied; no cloud credentials; no deployment endpoints | Authenticated OIDC/RBAC implementation required before enabling administrative mutations |

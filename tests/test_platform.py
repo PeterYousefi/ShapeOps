@@ -148,3 +148,51 @@ def test_all_five_samples_parse_as_genuine_step(sample):
         for face, actual in zip(result["faces"], original.Faces()):
             vertex = cq.Vertex.makeVertex(*face["positions"][:3])
             assert vertex.distance(actual) < 0.001
+
+
+def test_transport_limit_rejects_before_multipart_spooling(client):
+    before = client.get("/api/telemetry").json()["failed"]
+    response = client.post(
+        "/api/inference/upload",
+        content=b"not parsed",
+        headers={
+            "Content-Length": str(12 * 1024 * 1024),
+            "Content-Type": "multipart/form-data; boundary=test",
+        },
+    )
+    assert response.status_code == 413
+    assert "10 MB" in response.json()["detail"]
+    assert client.get("/api/telemetry").json()["failed"] == before + 1
+
+
+def test_chunked_transport_limit():
+    import asyncio
+    from backend.security import BodyLimitMiddleware, MAX_BODY_BYTES
+
+    rejected = []
+
+    async def inner(scope, receive, send):
+        await receive()
+
+    async def receive():
+        return {
+            "type": "http.request",
+            "body": b"x" * (MAX_BODY_BYTES + 1),
+            "more_body": False,
+        }
+
+    async def send(message):
+        pass
+
+    middleware = BodyLimitMiddleware(
+        inner, on_reject=lambda scope: rejected.append(True)
+    )
+    with pytest.raises(Exception) as exc:
+        asyncio.run(
+            middleware(
+                {"type": "http", "path": "/api/inference/upload", "headers": []},
+                receive,
+                send,
+            )
+        )
+    assert getattr(exc.value, "status_code", None) == 413 and rejected == [True]

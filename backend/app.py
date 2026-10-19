@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from backend.cad import SAMPLES, sample_shape, describe
 from backend.training import train, ROOT
+from backend.security import BodyLimitMiddleware
 
 logger = logging.getLogger("shapeops")
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -43,6 +44,14 @@ async def lifespan(app):
 
 
 app = FastAPI(title="ShapeOps API", version="0.1.0", lifespan=lifespan)
+
+
+def rejected_body(scope):
+    trace = scope.get("state", {}).get("trace", uuid.uuid4().hex)
+    record(trace, "upload", "unselected", False, 0, error="validation")
+
+
+app.add_middleware(BodyLimitMiddleware, on_reject=rejected_body)
 semaphore = asyncio.Semaphore(2)
 rates: defaultdict[str, deque[float]] = defaultdict(deque)
 

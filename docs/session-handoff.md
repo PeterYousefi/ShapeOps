@@ -16,9 +16,9 @@ Frontend http://127.0.0.1:5173; API http://127.0.0.1:8000. Native CAD initializa
 
 ## Verified test state
 
-15 backend tests pass. Three browser tests cover complete desktop flow, mobile all-screen flow/no full-page overflow, and zero axe WCAG A/AA violations across six screens × two themes. Screenshots captured/visually inspected. Final upload-identity regression received an additional passing desktop/mobile run. TypeScript production build, Ruff F checks, baseline MyPy, dependency audits, Helm lint/render and Terraform provider-schema validation pass. See artifacts and acceptance-tests.md for limits and exact records. No Azure plan/apply occurred.
+17 backend tests pass. Three browser tests cover complete desktop flow, mobile all-screen flow/no full-page overflow, and zero axe WCAG A/AA violations across six screens × two themes. Screenshots captured/visually inspected. Final upload-identity regression received an additional passing desktop/mobile run. TypeScript production build, Ruff F checks, baseline MyPy, dependency audits, Helm lint/render and Terraform provider-schema validation pass. See artifacts and acceptance-tests.md for limits and exact records. No Azure plan/apply occurred.
 
-Timed local test process: 46.95s wall, maximum resident set ~648 MB, peak memory footprint ~439 MB (macOS time output). This is a test process measurement, not container memory sizing. Ten-request cached-sample benchmark median client latency ~20.9ms, max ~32.5ms; not parsing/cold-start/cloud latency.
+Prior 15-test local process: 46.95s wall, maximum resident set ~648 MB, peak memory footprint ~439 MB (macOS time output). This is a test process measurement, not container memory sizing. Ten-request cached-sample benchmark median client latency ~20.9ms, max ~32.5ms; not parsing/cold-start/cloud latency.
 
 ## Git/GitHub
 
@@ -28,7 +28,7 @@ A draft PR is being opened for this branch; inspect GitHub rather than create du
 
 ## Pending engineering
 
-See open-issues.md, roadmap.md and requirements-matrix.md. Highest priorities: finish actual hosted Docker/Kind/image scans; transport-level multipart body bounds and stronger worker resource isolation; long-lived immutable registry/candidate/history; OIDC/RBAC before enabling privileged actions; durable cloud adapters and telemetry export; industrial evaluation/calibration and validated drift. Prepare an approved costed Azure plan only after those prerequisites. The YAML preparation workflow performs no deployment.
+See open-issues.md, roadmap.md and requirements-matrix.md. Highest priorities: finish actual hosted Docker/Kind/image scans; stronger native worker resource isolation and distributed abuse controls; long-lived immutable registry/candidate/history; OIDC/RBAC before enabling privileged actions; durable cloud adapters and telemetry export; industrial evaluation/calibration and validated drift. Prepare an approved costed Azure plan only after those prerequisites. The YAML preparation workflow performs no deployment.
 
 ## Next executable steps
 

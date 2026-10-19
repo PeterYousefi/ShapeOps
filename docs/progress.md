@@ -2,7 +2,7 @@
 
 Working local ShapeOps application delivered in the shared workspace. Six screens implement the original engineering identity and a real CAD/inference workflow. Browser screenshots are genuine local execution evidence, including sample/benchmark/upload traffic. No production telemetry or release history has been fabricated.
 
-Verified: 15 backend tests; desktop/mobile engineering walkthroughs; 12 screen/theme axe configurations with zero detected WCAG A/AA violations; TypeScript/Vite build; Ruff F checks and baseline MyPy; runtime npm/pip vulnerability audits; Helm lint/render; Terraform provider-schema validation. The complete autonomous production contract is not complete; roadmap/open issues retain the remaining work.
+Verified: 17 backend tests; desktop/mobile engineering walkthroughs; 12 screen/theme axe configurations with zero detected WCAG A/AA violations; TypeScript/Vite build; Ruff F checks and baseline MyPy; runtime npm/pip vulnerability audits; Helm lint/render; Terraform provider-schema validation. The complete autonomous production contract is not complete; roadmap/open issues retain the remaining work.
 
 Original baseline RF showed composite-geometry weakness despite synthetic held-out scores; a balanced deterministic version corrects the default sample behavior. The RF and Extra Trees artifacts are distinct, with differing held-out log loss and composite inference behavior. All industrial generalization/calibration limitations stay visible.
 

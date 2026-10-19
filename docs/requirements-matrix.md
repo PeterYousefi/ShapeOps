@@ -19,7 +19,7 @@
 | OOD screening | Seeded Isolation Forest; reference-vs-shift test | Small procedural reference, no industrial validation/drift report pipeline |
 | Operations and isolated incident | Actual failure detection and stable inference checks | Verified; not a cloud rollback |
 | Privileged-operation protection | Promotion route returns 403; no cloud credentials | OIDC/RBAC and authorized administration unimplemented |
-| Upload/privacy/resource controls | Size/header/face/extent/triangle/time/rate/concurrency bounds | Additional transport-level body cap and worker memory isolation needed |
+| Upload/privacy/resource controls | Size/header/face/extent/triangle/time/rate/concurrency bounds | Pre-multipart declared/chunked body cap verified; stronger worker memory isolation still needed |
 | Docker | Multi-stage nonroot image and Compose | Prepared; local Docker unavailable; hosted CI must be inspected |
 | Kubernetes | Helm lint/render passed; Kind smoke script | Cluster execution pending runtime/CI |
 | Terraform | fmt/init/provider-schema validate passed | No Azure plan/apply/security scan performed |
