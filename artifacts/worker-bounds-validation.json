@@ -1,0 +1,64 @@
+{
+  "scope": "Disposable native CAD worker resource and result-channel bounds",
+  "local_platform": "macOS arm64 / Python 3.14",
+  "backend": {
+    "passed": 42,
+    "skipped": 1,
+    "seconds": 40.47,
+    "skip_reason": "Linux address-space enforcement probe is Linux-only"
+  },
+  "browser": {
+    "passed": 10,
+    "seconds": 44.1,
+    "earlier_attempt": "9 passed; desktop total-budget timeout at final width assertion; focused retry passed before total walkthrough budget was increased to 120s. Per-operation and native parser deadlines unchanged."
+  },
+  "quality": {
+    "ruff": "passed",
+    "mypy": "passed",
+    "frontend_typecheck_build": "passed",
+    "kind_shell_syntax": "passed"
+  },
+  "budgets": {
+    "wall_seconds": 30,
+    "cpu_seconds": 25,
+    "result_bytes": 25165824,
+    "linux_address_space_bytes": 2684354560,
+    "linux_data_bytes": 1073741824,
+    "core_bytes": 0
+  },
+  "actual_tests": [
+    "CPU-bound child terminated by kernel",
+    "Oversize child file write rejected",
+    "Stricter inherited ceilings preserved",
+    "Finite atomic bounded JSON publication",
+    "Missing malformed oversized non-object and nonzero-exit results rejected",
+    "Symlinks and FIFOs rejected without blocking",
+    "Temporary directories removed on protocol failures",
+    "All five real sample STEP round-trips",
+    "Real browser sample and STEP upload/comparison flows"
+  ],
+  "linux_verification": {
+    "source_commit": "5b85d2a92a98f973ee2ce6af126695ec87d29ab5",
+    "run_id": 39333830779,
+    "url": "https://github.com/PeterYousefi/ShapeOps/actions/runs/39333830779",
+    "checks": {
+      "application": "success",
+      "container": "success",
+      "kubernetes": "success",
+      "terraform": "success"
+    },
+    "python_tests_passed": 43,
+    "python_tests_seconds": 17.51,
+    "playwright_checks_passed": 10,
+    "native_container_upload_before_restart": "10 faces, passed",
+    "native_container_upload_after_restart": "10 faces, passed",
+    "note": "Actual hosted log results. Linux-only probe ran without a skip; native worker imported/parsed genuine STEP inside the nonroot application container."
+  },
+  "remaining": [
+    "Filesystem/network isolation",
+    "Bounded admission/wait queues",
+    "Aggregate worker resource accounting",
+    "Distributed abuse controls"
+  ],
+  "azure_deployed": false
+}
