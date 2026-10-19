@@ -1,16 +1,12 @@
 import { test, expect } from "@playwright/test";
 import fs from "node:fs";
 import AxeBuilder from "@axe-core/playwright";
-test("accessible dark and light workspace screens", async ({ page }) => {
+test("accessible Digital Engineering Lab screens", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await expect(page.getByText("19 faces · mm")).toBeVisible();
   const findings = [];
-  for (const theme of ["dark", "light"]) {
-    if (theme === "light")
-      await page
-        .getByRole("button", { name: "Light appearance", exact: true })
-        .click();
+  for (const theme of ["light"]) {
     for (const screen of [
       "Overview",
       "Inference Studio",
@@ -48,12 +44,10 @@ test("accessible dark and light workspace screens", async ({ page }) => {
     "artifacts/accessibility-audit.json",
     JSON.stringify(findings, null, 2),
   );
-  await test
-    .info()
-    .attach("accessibility-audit", {
-      body: JSON.stringify(findings, null, 2),
-      contentType: "application/json",
-    });
+  await test.info().attach("accessibility-audit", {
+    body: JSON.stringify(findings, null, 2),
+    contentType: "application/json",
+  });
   expect(
     findings.reduce((n, f) => n + f.violations.length, 0),
     "See artifacts/accessibility-audit.json",

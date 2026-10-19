@@ -35,8 +35,6 @@ import {
   Search,
   Server,
   ShieldCheck,
-  Sun,
-  Moon,
   Terminal,
   TriangleAlert,
   Workflow,
@@ -44,9 +42,11 @@ import {
   Zap,
 } from "lucide-react";
 import Viewer from "./Viewer";
+import PredictionDetails from "./PredictionDetails";
 import type { Result, Registry, Telemetry, Operations } from "./types";
 import { COLORS } from "./types";
 import "./styles.css";
+import "./lab.css";
 const NAV = [
   { name: "Overview", icon: LayoutDashboard },
   { name: "Inference Studio", icon: Box },
@@ -200,9 +200,7 @@ function App() {
     }),
     [collapsed, setCollapsed] = useState(false),
     [mobile, setMobile] = useState(false),
-    [light, setLight] = useState(
-      () => localStorage.getItem("shapeops-theme") === "light",
-    ),
+    [registrySelection, setRegistrySelection] = useState("surface-rf-v1"),
     [result, setResult] = useState<Result | null>(null),
     [resultFilename, setResultFilename] = useState<string | null>(null),
     [selected, setSelected] = useState<number | null>(null),
@@ -320,9 +318,9 @@ function App() {
     };
   }, [modal]);
   useEffect(() => {
-    document.documentElement.dataset.theme = light ? "light" : "dark";
-    localStorage.setItem("shapeops-theme", light ? "light" : "dark");
-  }, [light]);
+    document.documentElement.dataset.theme = "light";
+    localStorage.setItem("shapeops-theme", "light");
+  }, []);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -414,11 +412,38 @@ function App() {
       count: result?.faces.filter((f) => f.prediction === label).length || 0,
     }))
     .filter((r) => r.count > 0);
+  const primaryStage =
+    registry.find((r) => r.id === result?.model)?.stage || "primary";
+  const comparisonStage =
+    registry.find((r) => r.id === result?.comparison_model)?.stage ||
+    "comparison";
+  const primaryLabel = `${primaryStage === "stable" ? "Stable" : primaryStage === "candidate" ? "Candidate" : "Primary"} · ${result?.model || "—"}`;
+  const comparisonLabel = `${comparisonStage === "stable" ? "Stable" : comparisonStage === "candidate" ? "Candidate" : "Comparison"} · ${result?.comparison_model || "—"}`;
+  useEffect(() => {
+    if (!result?.comparison_model)
+      setViewMode((v) =>
+        v === "alternate" || v === "disagreements" ? "prediction" : v,
+      );
+  }, [result]);
+  const changedFaces = result?.faces.filter((f) => f.disagreement) || [];
+  const studioHistogram = Object.keys(COLORS)
+    .map((label) => ({
+      label,
+      count:
+        result?.faces.filter(
+          (f) =>
+            (viewMode === "alternate" ? f.candidate : f.prediction) === label,
+        ).length || 0,
+    }))
+    .filter((g) => g.count);
   const heading = (
     <div className="page-heading">
       <div>
         <div className="breadcrumb">
-          WORKSPACE <ChevronRight size={11} /> ENGINEERING PLATFORM
+          SHAPEOPS LAB <ChevronRight size={11} />{" "}
+          {page === "Inference Studio"
+            ? "GEOMETRY / ANALYSIS"
+            : "ENGINEERING WORKSPACE"}
         </div>
         <h1>{page === "Overview" ? "Workspace overview" : page}</h1>
         <p>
@@ -428,7 +453,7 @@ function App() {
                 Overview:
                   "From CAD geometry to operational intelligence. One connected workspace.",
                 "Inference Studio":
-                  "Inspect geometry. Understand predictions. Compare with confidence.",
+                  "A working surface for geometry, predictions and model comparison.",
                 "Model Registry":
                   "Versioned artifacts, reproducible lineage, explicit release gates.",
                 Observability:
@@ -465,6 +490,7 @@ function App() {
           <button
             className="button secondary"
             disabled={!result}
+            aria-label="Export report"
             onClick={downloadReport}
           >
             <ArrowDownToLine size={15} /> Export report
@@ -617,7 +643,7 @@ function App() {
           </span>
           <span>
             shape<span className="brand-ops">ops</span>
-            <small>ENGINEERING INTELLIGENCE</small>
+            <small>DIGITAL ENGINEERING LAB</small>
           </span>
         </a>
         <button
@@ -630,11 +656,13 @@ function App() {
           </span>
           <ChevronDown size={14} />
         </button>
-        <div className="nav-label">PLATFORM</div>
+        <div className="nav-label">LAB WORKSPACE</div>
         <nav>
           {NAV.map(({ name, icon: Icon }) => (
             <button
               key={name}
+              aria-label={name}
+              aria-current={page === name ? "page" : undefined}
               title={collapsed ? name : undefined}
               className={"nav-item " + (page === name ? "selected" : "")}
               onClick={() => navigate(name)}
@@ -659,12 +687,19 @@ function App() {
               CPU runtime <span>●</span>
             </span>
           </div>
-          <button className="nav-item" onClick={() => setLight(!light)}>
-            {light ? <Moon size={17} /> : <Sun size={17} />}
-            <span>{light ? "Dark appearance" : "Light appearance"}</span>
+          <button
+            className="nav-item"
+            onClick={() => {
+              setDoc("5-minute walkthrough");
+              navigate("Documentation");
+            }}
+          >
+            <BookOpen size={17} />
+            <span>Lab guide</span>
           </button>
           <button
             className="nav-item collapse-btn"
+            aria-label={collapsed ? "Expand navigation" : "Collapse sidebar"}
             onClick={() => setCollapsed(!collapsed)}
           >
             {collapsed ? (
@@ -728,7 +763,7 @@ function App() {
             </button>
           </div>
         </header>
-        <main>
+        <main className={"page-" + page.toLowerCase().replaceAll(" ", "-")}>
           {heading}
           {apiError && (
             <div className="alert red">
@@ -740,14 +775,39 @@ function App() {
           {error && (
             <div className="alert red" role="alert">
               <TriangleAlert size={16} />
-              <span>{error}</span>
+              <div className="error-description">
+                <strong>
+                  {file && !/\.(step|stp)$/i.test(file.name)
+                    ? "Unsupported file format"
+                    : "Analysis could not complete"}
+                </strong>
+                <span>{error}</span>
+                {result && (
+                  <small>
+                    The last successful analysis is still available below.
+                  </small>
+                )}
+              </div>
               <button
                 onClick={() =>
-                  file ? upload(file) : void run(sample, model, compare)
+                  file && !/\.(step|stp)$/i.test(file.name)
+                    ? input.current?.click()
+                    : file
+                      ? upload(file)
+                      : void run(sample, model, compare)
                 }
               >
-                Retry
+                {file && !/\.(step|stp)$/i.test(file.name)
+                  ? "Choose another file"
+                  : "Retry"}
               </button>
+              {file &&
+                /\.(step|stp)$/i.test(file.name) &&
+                page === "Inference Studio" && (
+                  <button onClick={() => input.current?.click()}>
+                    Choose another file
+                  </button>
+                )}
               <button aria-label="Dismiss error" onClick={() => setError("")}>
                 <X size={14} />
               </button>
@@ -880,6 +940,30 @@ function App() {
                       </button>
                     </div>
                   </section>
+                  <section className="candidate-strip">
+                    <span className="eyebrow">CANDIDATE / EVALUATION</span>
+                    <h3>
+                      {registry.find((r) => r.stage === "candidate")?.id ||
+                        "Unavailable"}
+                    </h3>
+                    <p>
+                      {registry.find((r) => r.stage === "candidate")
+                        ?.algorithm || "Registry unavailable"}{" "}
+                      · awaiting release gates
+                    </p>
+                    <button
+                      className="text-button"
+                      onClick={() => {
+                        setRegistrySelection(
+                          registry.find((r) => r.stage === "candidate")?.id ||
+                            "surface-et-v2",
+                        );
+                        navigate("Model Registry");
+                      }}
+                    >
+                      Inspect candidate <ArrowRight size={13} />
+                    </button>
+                  </section>
                   <section className="walkthrough-card">
                     <div className="walkthrough-icon">
                       <Command size={18} />
@@ -958,11 +1042,42 @@ function App() {
                   ))}
                 </section>
               </div>
+              <section className="panel lab-event-stream">
+                <SectionTitle title="Recent operational events" />
+                {ops?.drills.length ? (
+                  ops.drills.slice(0, 3).map((d) => (
+                    <div className="lab-event" key={d.id}>
+                      <CheckCircle2 size={17} />
+                      <div>
+                        <strong>
+                          Isolated recovery drill{" "}
+                          {d.passed ? "passed" : "failed"}
+                        </strong>
+                        <small>
+                          {d.checks.length} checks · {ms(d.duration_ms)} ·{" "}
+                          {ago(d.at)}
+                        </small>
+                      </div>
+                      <button
+                        className="text-button"
+                        onClick={() => navigate("Operations")}
+                      >
+                        Inspect <ArrowRight size={13} />
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <Empty title="No operational events recorded">
+                    Run an isolated recovery drill in Operations to create a
+                    real event.
+                  </Empty>
+                )}
+              </section>
               <section className="panel recent-panel">
                 <div className="panel-header">
                   <div className="panel-title">
                     <Terminal size={16} />
-                    <h2>Recent inference requests</h2>
+                    <h2>Recent CAD analyses</h2>
                     <span className="count">{telemetry.total}</span>
                   </div>
                   <button
@@ -984,12 +1099,14 @@ function App() {
                     <label htmlFor="sample">INPUT</label>
                     <select
                       id="sample"
-                      value={sample}
+                      value={file ? "__upload" : sample}
                       onChange={(e) => {
+                        if (e.target.value === "__upload") return;
                         setSample(e.target.value);
                         setFile(null);
                       }}
                     >
+                      {file && <option value="__upload">{file.name}</option>}
                       {SAMPLES.map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.name}
@@ -1059,7 +1176,11 @@ function App() {
                       ? `Uploading ${uploadProgress}%`
                       : "Upload complete. Parsing geometry and running inference…"}
                   </span>
-                  <progress value={uploadProgress} max={100} />
+                  <progress
+                    aria-label="STEP file upload"
+                    value={uploadProgress}
+                    max={100}
+                  />
                 </div>
               )}
               <div className="studio-layout">
@@ -1073,9 +1194,13 @@ function App() {
                       <Badge
                         tone={result?.source === "sample" ? "blue" : "green"}
                       >
-                        {result?.source === "sample"
-                          ? "Sample CAD"
-                          : "Uploaded CAD"}
+                        {!result
+                          ? busy
+                            ? "Preparing CAD"
+                            : "No CAD loaded"
+                          : result.source === "sample"
+                            ? "Sample CAD"
+                            : "Uploaded CAD"}
                       </Badge>
                     </div>
                     <select
@@ -1083,9 +1208,21 @@ function App() {
                       value={viewMode}
                       onChange={(e) => setViewMode(e.target.value)}
                     >
-                      <option value="prediction">Prediction colors</option>
+                      <option value="prediction">
+                        {result?.comparison_model
+                          ? primaryLabel
+                          : "Prediction colors"}
+                      </option>
+                      {result?.comparison_model && (
+                        <option value="alternate">{comparisonLabel}</option>
+                      )}
                       <option value="solid">Solid geometry</option>
-                      <option value="disagreements">Disagreements</option>
+                      <option
+                        value="disagreements"
+                        disabled={!result?.comparison_model}
+                      >
+                        Disagreements
+                      </option>
                     </select>
                   </div>
                   <Viewer
@@ -1093,24 +1230,105 @@ function App() {
                     selected={selected}
                     onSelect={selectFace}
                     mode={viewMode}
+                    busy={busy}
                   />
-                  <div className="canvas-info">
-                    <div className="mini-legend">
-                      {histogram.map((h) => (
+                  {result?.comparison_model && (
+                    <div
+                      className="comparison-workbench"
+                      aria-label="Completed model comparison"
+                    >
+                      <div className="comparison-summary">
+                        <GitCompareArrows size={16} />
+                        <strong>
+                          {result.face_count - result.disagreements} /{" "}
+                          {result.face_count} agree
+                        </strong>
+                        <span>{result.disagreements} changed surfaces</span>
                         <button
-                          key={h.label}
+                          className="text-button"
+                          disabled={!changedFaces.length}
                           onClick={() => {
-                            const f = result?.faces.find(
-                              (f) => f.prediction === h.label,
+                            const i = changedFaces.findIndex(
+                              (f) => f.id === selected,
                             );
-                            if (f) setSelected(f.id);
+                            setSelected(
+                              changedFaces[(i + 1) % changedFaces.length].id,
+                            );
+                            setViewMode("disagreements");
                           }}
                         >
-                          <i style={{ background: COLORS[h.label] }} />
-                          {h.label}
-                          <b>{h.count}</b>
+                          Next disagreement <ArrowRight size={13} />
                         </button>
-                      ))}
+                      </div>
+                      <div
+                        className="comparison-layers"
+                        role="group"
+                        aria-label="Prediction layer"
+                      >
+                        <button
+                          aria-pressed={viewMode === "prediction"}
+                          onClick={() => setViewMode("prediction")}
+                        >
+                          {primaryLabel}
+                        </button>
+                        <button
+                          aria-pressed={viewMode === "alternate"}
+                          onClick={() => setViewMode("alternate")}
+                        >
+                          {comparisonLabel}
+                        </button>
+                        <button
+                          aria-pressed={viewMode === "disagreements"}
+                          onClick={() => setViewMode("disagreements")}
+                        >
+                          Differences <span>{result.disagreements}</span>
+                        </button>
+                      </div>
+                      {viewMode === "disagreements" && (
+                        <p>
+                          Amber = changed class · muted mint = agreement. Select
+                          a face to inspect both predictions.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  <div className="canvas-info">
+                    <div className="mini-legend">
+                      {viewMode === "disagreements" ? (
+                        <>
+                          <span>
+                            <i style={{ background: "#e7a85f" }} />
+                            Changed <b>{result?.disagreements ?? 0}</b>
+                          </span>
+                          <span>
+                            <i style={{ background: "#bacbc5" }} />
+                            Agreement{" "}
+                            <b>
+                              {(result?.face_count ?? 0) -
+                                (result?.disagreements ?? 0)}
+                            </b>
+                          </span>
+                        </>
+                      ) : (
+                        studioHistogram.map((h) => (
+                          <button
+                            key={h.label}
+                            onClick={() => {
+                              const f = result?.faces.find(
+                                (f) =>
+                                  (viewMode === "alternate"
+                                    ? f.candidate
+                                    : f.prediction) === h.label,
+                              );
+                              if (f) setSelected(f.id);
+                            }}
+                          >
+                            <i style={{ background: COLORS[h.label] }} />
+                            {h.label}
+                            <b>{h.count}</b>
+                          </button>
+                        ))
+                      )}
                     </div>
                     <span className="mono muted">
                       {result?.bounds.map((b) => b.toFixed(1)).join(" × ")} mm
@@ -1126,70 +1344,21 @@ function App() {
                     <span className="count">{result?.face_count || 0}</span>
                   </div>
                   <div className="inspector-body">
-                    <span className="eyebrow">
-                      {face ? "SELECTED FACE" : "INFERENCE SUMMARY"}
-                    </span>
-                    <h3>
-                      {face
-                        ? `Face ${String(face.id + 1).padStart(3, "0")}`
-                        : "Geometry intelligence"}
-                    </h3>
-                    <p>
-                      {face
-                        ? "Actual B-rep face and model output."
-                        : "Click a surface in the viewport or select a face below."}
-                    </p>
-                    {face ? (
-                      <>
-                        <div className="prediction-class">
-                          <i style={{ background: COLORS[face.prediction] }} />
-                          {face.prediction}
-                        </div>
-                        <div className="confidence-label">
-                          <span>Model confidence</span>
-                          <strong>{pct(face.confidence)}</strong>
-                        </div>
-                        <div className="confidence-bar">
-                          <i style={{ width: pct(face.confidence) }} />
-                        </div>
-                        <dl>
-                          <div>
-                            <dt>Surface area</dt>
-                            <dd>{face.area.toFixed(2)} mm²</dd>
-                          </div>
-                          <div>
-                            <dt>Boundary edges</dt>
-                            <dd>{face.edges}</dd>
-                          </div>
-                          <div>
-                            <dt>CAD surface type</dt>
-                            <dd>{face.surface}</dd>
-                          </div>
-                          <div>
-                            <dt>Face identifier</dt>
-                            <dd className="mono">face:{face.id}</dd>
-                          </div>
-                          {face.candidate && (
-                            <div>
-                              <dt>Comparison</dt>
-                              <dd>{face.candidate}</dd>
-                            </div>
-                          )}
-                        </dl>
-                      </>
-                    ) : (
+                    <PredictionDetails
+                      result={result}
+                      face={face}
+                      onSelect={selectFace}
+                      onClear={() => setSelected(null)}
+                      primaryLabel={primaryLabel}
+                      comparisonLabel={comparisonLabel}
+                    />
+                    <div className="inspector-separator" />
+                    <details className="execution-details">
+                      <summary>Execution & request metadata</summary>
                       <dl>
                         <div>
-                          <dt>Predicted faces</dt>
-                          <dd>{result?.face_count || "—"}</dd>
-                        </div>
-                        <div>
                           <dt>Boundary edges</dt>
-                          <dd>{result?.edge_count || "—"}</dd>
-                        </div>
-                        <div>
-                          <dt>Mean confidence</dt>
-                          <dd>{pct(result?.confidence)}</dd>
+                          <dd>{result?.edge_count ?? "—"}</dd>
                         </div>
                         <div>
                           <dt>Solid volume</dt>
@@ -1199,61 +1368,65 @@ function App() {
                               : "—"}
                           </dd>
                         </div>
-                      </dl>
-                    )}
-                    <div className="inspector-separator" />
-                    <div className="eyebrow">EXECUTION DETAILS</div>
-                    <dl>
-                      <div>
-                        <dt>Total latency</dt>
-                        <dd>{ms(result?.latency_ms)}</dd>
-                      </div>
-                      <div>
-                        <dt>CAD preprocessing</dt>
-                        <dd>
-                          {result?.source === "sample"
-                            ? "Cached geometry"
-                            : ms(result?.parse_ms)}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Model execution</dt>
-                        <dd>{ms(result?.execution_ms)}</dd>
-                      </div>
-                      <div>
-                        <dt>Model version</dt>
-                        <dd className="mono">
-                          {result?.model.replace("surface-", "") || "—"}
-                        </dd>
-                      </div>
-                      {result?.comparison_model && (
                         <div>
-                          <dt>Disagreements</dt>
+                          <dt>Total latency</dt>
+                          <dd>{ms(result?.latency_ms)}</dd>
+                        </div>
+                        <div>
+                          <dt>CAD preprocessing</dt>
                           <dd>
-                            {result.disagreements} / {result.face_count}
+                            {result?.source === "sample"
+                              ? "Cached geometry"
+                              : ms(result?.parse_ms)}
                           </dd>
                         </div>
-                      )}
-                    </dl>
+                        <div>
+                          <dt>Model execution</dt>
+                          <dd>{ms(result?.execution_ms)}</dd>
+                        </div>
+                        <div>
+                          <dt>Model version</dt>
+                          <dd className="mono">
+                            {result?.model.replace("surface-", "") || "—"}
+                          </dd>
+                        </div>
+                        {result?.comparison_model && (
+                          <div>
+                            <dt>Disagreements</dt>
+                            <dd>
+                              {result.disagreements} / {result.face_count}
+                            </dd>
+                          </div>
+                        )}
+                      </dl>
+                    </details>
                     <div
-                      className={"ood-note " + (result?.ood ? "warning" : "")}
+                      className={
+                        "ood-note " +
+                        (!result ? "unavailable" : result.ood ? "warning" : "")
+                      }
                     >
-                      <ShieldCheck size={16} />
+                      {result ? <ShieldCheck size={16} /> : <Info size={16} />}
                       <div>
                         <strong>
-                          {result?.ood
-                            ? "Outside reference distribution"
-                            : "Within reference distribution"}
+                          {!result
+                            ? "Reference screening unavailable"
+                            : result.ood
+                              ? "Outside reference distribution"
+                              : "Within reference distribution"}
                         </strong>
                         <p>
-                          Procedural geometry screening · not a calibrated
-                          industrial OOD guarantee.
+                          {result
+                            ? "Procedural geometry screening · not a calibrated industrial OOD guarantee."
+                            : "Run an analysis to calculate reference screening."}
                         </p>
                       </div>
                     </div>
                     <div className="trace-id">
                       <span>TRACE ID</span>
                       <button
+                        disabled={!result}
+                        aria-label="Copy request trace ID"
                         onClick={() => {
                           if (result) {
                             void navigator.clipboard.writeText(result.trace_id);
@@ -1268,6 +1441,10 @@ function App() {
                     </div>
                   </div>
                 </aside>
+              </div>
+              <div className="lab-section-label">
+                <span>02 / FACE EXPLORER</span>
+                <span>LINKED TO VIEWPORT SELECTION</span>
               </div>
               <section className="panel faces-panel">
                 <div className="panel-header">
@@ -1289,7 +1466,7 @@ function App() {
                         <th>CONFIDENCE</th>
                         <th>AREA (mm²)</th>
                         <th>EDGES</th>
-                        {compare && <th>COMPARISON</th>}
+                        {result?.comparison_model && <th>COMPARISON</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -1302,6 +1479,7 @@ function App() {
                           <td>
                             <button
                               className="text-button mono"
+                              aria-pressed={selected === f.id}
                               onClick={() => setSelected(f.id)}
                             >
                               Face {String(f.id + 1).padStart(3, "0")}
@@ -1321,7 +1499,7 @@ function App() {
                           </td>
                           <td className="mono">{f.area.toFixed(2)}</td>
                           <td>{f.edges}</td>
-                          {compare && (
+                          {result?.comparison_model && (
                             <td>
                               {f.candidate ? (
                                 <Badge
@@ -1352,7 +1530,7 @@ function App() {
               <div className="info-banner">
                 <GitBranch size={18} />
                 <div>
-                  <strong>Every model has a paper trail.</strong>
+                  <strong>Inspect the artifact. Follow its lineage.</strong>
                   <span>
                     Immutable trained-tree checksums, dataset hashes, held-out
                     evaluation, and source provenance.
@@ -1360,75 +1538,109 @@ function App() {
                 </div>
                 <Badge tone="blue">Local registry</Badge>
               </div>
-              <div className="registry-grid">
-                {registry.map((r) => (
-                  <section key={r.id} className="panel model-card">
-                    <div className="model-card-top">
-                      <div className="model-symbol">
-                        <Boxes size={27} />
-                      </div>
-                      <Badge tone={r.stage === "stable" ? "green" : "purple"}>
-                        {r.stage === "stable" ? "Stable baseline" : "Candidate"}
-                      </Badge>
-                    </div>
-                    <div className="eyebrow">
-                      ANALYTIC SURFACE CLASSIFICATION
-                    </div>
-                    <h2>{r.id}</h2>
-                    <p>
-                      {r.algorithm} · {r.framework}
-                    </p>
-                    <div className="model-metrics">
-                      <div>
-                        <strong>{pct(r.macro_f1)}</strong>
-                        <span>Held-out macro F1</span>
-                      </div>
-                      <div>
-                        <strong>{r.evaluation_rows}</strong>
-                        <span>Evaluation faces</span>
-                      </div>
-                      <div>
-                        <strong>{r.training_rows}</strong>
-                        <span>Training faces</span>
-                      </div>
-                    </div>
-                    <div className="data-note">
-                      <Info size={14} />
-                      {r.limitations}
-                    </div>
-                    <dl>
-                      <div>
-                        <dt>Artifact SHA-256</dt>
-                        <dd className="mono">{r.checksum.slice(0, 16)}…</dd>
-                      </div>
-                      <div>
-                        <dt>Runtime</dt>
-                        <dd>{r.runtime}</dd>
-                      </div>
-                      <div>
-                        <dt>Training seed</dt>
-                        <dd>42 · deterministic</dd>
-                      </div>
-                    </dl>
-                    <div className="model-card-actions">
-                      <button
-                        className="button secondary"
-                        onClick={() => setModal(`model:${r.id}`)}
-                      >
-                        <FileBox size={14} /> Model card
-                      </button>
-                      <button
-                        className="text-button"
-                        onClick={() => {
-                          setModel(r.id);
-                          navigate("Inference Studio");
-                        }}
-                      >
-                        Use in studio <ArrowRight size={14} />
-                      </button>
-                    </div>
-                  </section>
+              <div className="lab-section-label">
+                <span>01 / RELEASE EXPLORER</span>
+                <span>REGISTERED ARTIFACTS · NOT A DEPLOYMENT HISTORY</span>
+              </div>
+              <div
+                className="release-selector"
+                aria-label="Registered model versions"
+              >
+                {registry.map((r, index) => (
+                  <button
+                    key={r.id}
+                    aria-pressed={registrySelection === r.id}
+                    onClick={() => setRegistrySelection(r.id)}
+                  >
+                    <span className="release-index">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <span>
+                      <strong>{r.id}</strong>
+                      <small>
+                        {r.algorithm} · {r.stage}
+                      </small>
+                    </span>
+                    <GitBranch size={18} />
+                  </button>
                 ))}
+              </div>
+              <div className="registry-grid">
+                {registry
+                  .filter((r) => r.id === registrySelection)
+                  .map((r) => (
+                    <section
+                      key={r.id}
+                      className="panel model-card release-selected"
+                    >
+                      <div className="model-card-top">
+                        <div className="model-symbol">
+                          <Boxes size={27} />
+                        </div>
+                        <Badge tone={r.stage === "stable" ? "green" : "purple"}>
+                          {r.stage === "stable"
+                            ? "Stable baseline"
+                            : "Candidate"}
+                        </Badge>
+                      </div>
+                      <div className="eyebrow">
+                        ANALYTIC SURFACE CLASSIFICATION
+                      </div>
+                      <h2>{r.id}</h2>
+                      <p>
+                        {r.algorithm} · {r.framework}
+                      </p>
+                      <div className="model-metrics">
+                        <div>
+                          <strong>{pct(r.macro_f1)}</strong>
+                          <span>Held-out macro F1</span>
+                        </div>
+                        <div>
+                          <strong>{r.evaluation_rows}</strong>
+                          <span>Evaluation faces</span>
+                        </div>
+                        <div>
+                          <strong>{r.training_rows}</strong>
+                          <span>Training faces</span>
+                        </div>
+                      </div>
+                      <div className="data-note">
+                        <Info size={14} />
+                        {r.limitations}
+                      </div>
+                      <dl>
+                        <div>
+                          <dt>Artifact SHA-256</dt>
+                          <dd className="mono">{r.checksum.slice(0, 16)}…</dd>
+                        </div>
+                        <div>
+                          <dt>Runtime</dt>
+                          <dd>{r.runtime}</dd>
+                        </div>
+                        <div>
+                          <dt>Training seed</dt>
+                          <dd>42 · deterministic</dd>
+                        </div>
+                      </dl>
+                      <div className="model-card-actions">
+                        <button
+                          className="button secondary"
+                          onClick={() => setModal(`model:${r.id}`)}
+                        >
+                          <FileBox size={14} /> Model card
+                        </button>
+                        <button
+                          className="text-button"
+                          onClick={() => {
+                            setModel(r.id);
+                            navigate("Inference Studio");
+                          }}
+                        >
+                          Use in studio <ArrowRight size={14} />
+                        </button>
+                      </div>
+                    </section>
+                  ))}
               </div>
               <section className="panel">
                 <div className="panel-header">
@@ -1493,6 +1705,14 @@ function App() {
                     </tbody>
                   </table>
                 </div>
+              </section>
+              <section className="panel promotion-history">
+                <SectionTitle title="Promotion history" />
+                <Empty title="No production promotions recorded">
+                  Stable and candidate are local registry designations.
+                  Production release events appear only after an authorized
+                  deployment.
+                </Empty>
               </section>
               <section className="panel lineage-panel">
                 <SectionTitle title="Reproducible lineage" />
@@ -1571,6 +1791,7 @@ function App() {
                   color="amber"
                 />
               </div>
+              <h2 className="lab-group-title">01 / SERVICE HEALTH</h2>
               <div className="observability-grid">
                 <section className="panel">
                   <div className="panel-header">
@@ -1587,86 +1808,6 @@ function App() {
                   <div className="panel-foot">
                     End-to-end inference latency · sample CAD preprocessing is
                     cached
-                  </div>
-                </section>
-                <section className="panel distribution-panel">
-                  <div className="panel-header">
-                    <div className="panel-title">
-                      <Cpu size={16} />
-                      <h2>Model · confidence distribution</h2>
-                    </div>
-                  </div>
-                  <div className="bar-chart">
-                    {["0–50%", "50–70%", "70–85%", "85–95%", "95–100%"].map(
-                      (label, i) => {
-                        const edges = [0, 0.5, 0.7, 0.85, 0.95, 1.001];
-                        const count = telemetry.requests.filter(
-                          (r) =>
-                            r.success &&
-                            r.confidence >= edges[i] &&
-                            r.confidence < edges[i + 1],
-                        ).length;
-                        return (
-                          <div key={label}>
-                            <span>{label}</span>
-                            <div>
-                              <i
-                                style={{
-                                  width: `${telemetry.successful ? (count / telemetry.successful) * 100 : 0}%`,
-                                }}
-                              />
-                            </div>
-                            <b>{count}</b>
-                          </div>
-                        );
-                      },
-                    )}
-                  </div>
-                  <div className="data-note">
-                    <Info size={13} />
-                    Per-request mean probability. Uncalibrated classifier
-                    confidence.
-                  </div>
-                </section>
-                <section className="panel">
-                  <div className="panel-header">
-                    <div className="panel-title">
-                      <FileBox size={16} />
-                      <h2>Data · geometry & distribution</h2>
-                    </div>
-                  </div>
-                  <div className="data-quality">
-                    <div>
-                      <span>Latest face count</span>
-                      <strong>{result?.face_count || "—"}</strong>
-                    </div>
-                    <div>
-                      <span>Latest edge count</span>
-                      <strong>{result?.edge_count || "—"}</strong>
-                    </div>
-                    <div>
-                      <span>Reference status</span>
-                      <Badge tone={result?.ood ? "amber" : "green"}>
-                        {result?.ood ? "Outside reference" : "Within reference"}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="distribution-contributors">
-                    <span className="eyebrow">
-                      LATEST INPUT · DEVIATION FROM REFERENCE MEAN
-                    </span>
-                    {result?.ood_contributions.slice(0, 3).map((c) => (
-                      <div key={c.feature}>
-                        <span>{c.feature}</span>
-                        <strong>{c.deviation}%</strong>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="data-note">
-                    <Info size={13} />
-                    Isolation Forest trained on perturbed descriptors of five
-                    procedural sample solids. Industrial drift validity is
-                    unestablished.
                   </div>
                 </section>
                 <section className="panel">
@@ -1737,6 +1878,98 @@ function App() {
                   </div>
                 </section>
               </div>
+              <div className="lab-monitoring-zones">
+                <div>
+                  <h2 className="lab-group-title">02 / MODEL BEHAVIOR</h2>
+                  <section className="panel distribution-panel">
+                    <div className="panel-header">
+                      <div className="panel-title">
+                        <Cpu size={16} />
+                        <h2>Model · confidence distribution</h2>
+                      </div>
+                    </div>
+                    <div className="bar-chart">
+                      {["0–50%", "50–70%", "70–85%", "85–95%", "95–100%"].map(
+                        (label, i) => {
+                          const edges = [0, 0.5, 0.7, 0.85, 0.95, 1.001];
+                          const count = telemetry.requests.filter(
+                            (r) =>
+                              r.success &&
+                              r.confidence >= edges[i] &&
+                              r.confidence < edges[i + 1],
+                          ).length;
+                          return (
+                            <div key={label}>
+                              <span>{label}</span>
+                              <div>
+                                <i
+                                  style={{
+                                    width: `${telemetry.successful ? (count / telemetry.successful) * 100 : 0}%`,
+                                  }}
+                                />
+                              </div>
+                              <b>{count}</b>
+                            </div>
+                          );
+                        },
+                      )}
+                    </div>
+                    <div className="data-note">
+                      <Info size={13} />
+                      Per-request mean probability. Uncalibrated classifier
+                      confidence.
+                    </div>
+                  </section>
+                </div>
+                <div>
+                  <h2 className="lab-group-title">
+                    03 / DATA DISTRIBUTION & DRIFT
+                  </h2>
+                  <section className="panel">
+                    <div className="panel-header">
+                      <div className="panel-title">
+                        <FileBox size={16} />
+                        <h2>Data distribution & drift screening</h2>
+                      </div>
+                    </div>
+                    <div className="data-quality">
+                      <div>
+                        <span>Latest face count</span>
+                        <strong>{result?.face_count || "—"}</strong>
+                      </div>
+                      <div>
+                        <span>Latest edge count</span>
+                        <strong>{result?.edge_count || "—"}</strong>
+                      </div>
+                      <div>
+                        <span>Reference status</span>
+                        <Badge tone={result?.ood ? "amber" : "green"}>
+                          {result?.ood
+                            ? "Outside reference"
+                            : "Within reference"}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="distribution-contributors">
+                      <span className="eyebrow">
+                        LATEST INPUT · DEVIATION FROM REFERENCE MEAN
+                      </span>
+                      {result?.ood_contributions.slice(0, 3).map((c) => (
+                        <div key={c.feature}>
+                          <span>{c.feature}</span>
+                          <strong>{c.deviation}%</strong>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="data-note">
+                      <Info size={13} />
+                      Isolation Forest trained on perturbed descriptors of five
+                      procedural sample solids. Industrial drift validity is
+                      unestablished.
+                    </div>
+                  </section>
+                </div>
+              </div>
               <section className="panel recent-panel">
                 <div className="panel-header">
                   <div className="panel-title">
@@ -1764,12 +1997,16 @@ function App() {
                 </div>
                 <Badge tone="amber">Local only</Badge>
               </div>
+              <div className="lab-section-label">
+                <span>01 / VALIDATE → AUTHORIZE → RELEASE</span>
+                <span>LOCAL CONTROL PLANE</span>
+              </div>
               <div className="ops-grid">
                 <section className="panel release-panel">
                   <div className="panel-header">
                     <div className="panel-title">
                       <GitBranch size={16} />
-                      <h2>Release readiness</h2>
+                      <h2>Rollout checkpoints</h2>
                     </div>
                     <Badge tone="amber">Not deployed</Badge>
                   </div>

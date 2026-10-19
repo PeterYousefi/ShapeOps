@@ -6,6 +6,7 @@ test("desktop complete engineering walkthrough", async ({ page, request }) => {
   await page.goto("/");
   await expect(page.getByText("Local runtime online")).toBeVisible();
   await expect(page.getByText("19 faces · mm")).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
     path: "artifacts/overview-desktop.png",
     fullPage: true,
@@ -31,8 +32,9 @@ test("desktop complete engineering walkthrough", async ({ page, request }) => {
     page.getByRole("button", { name: "Run inference", exact: true }),
   ).toBeEnabled();
   await expect(
-    page.getByRole("term").filter({ hasText: "Disagreements" }),
+    page.getByRole("group", { name: "Prediction layer" }),
   ).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
     path: "artifacts/studio-desktop.png",
     fullPage: true,
@@ -65,12 +67,22 @@ test("desktop complete engineering walkthrough", async ({ page, request }) => {
   await page
     .getByRole("button", { name: "Model Registry", exact: true })
     .click();
+  const releases = page.getByRole("button", {
+    name: /surface-et-v2.*ExtraTreesClassifier/,
+  });
+  await releases.click();
+  await expect(releases).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".model-card h2")).toHaveText("surface-et-v2");
+  await expect(
+    page.getByText("No production promotions recorded", { exact: true }),
+  ).toBeVisible();
   await page
     .getByRole("button", { name: "Model card", exact: true })
     .first()
     .click();
   await expect(page.getByRole("dialog")).toContainText("Artifact SHA-256");
   await page.getByRole("button", { name: "Close dialog" }).click();
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
     path: "artifacts/registry-desktop.png",
     fullPage: true,
@@ -81,6 +93,7 @@ test("desktop complete engineering walkthrough", async ({ page, request }) => {
   await expect(
     page.getByRole("heading", { name: "Request explorer" }),
   ).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
     path: "artifacts/observability-desktop.png",
     fullPage: true,
@@ -92,6 +105,7 @@ test("desktop complete engineering walkthrough", async ({ page, request }) => {
   await expect(
     page.getByText("Stable adapter recovery inference").first(),
   ).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
     path: "artifacts/operations-desktop.png",
     fullPage: true,
@@ -105,20 +119,20 @@ test("desktop complete engineering walkthrough", async ({ page, request }) => {
   await expect(
     page.getByText("Five minutes from geometry to operational confidence."),
   ).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
     path: "artifacts/documentation-desktop.png",
     fullPage: true,
   });
-  await page
-    .getByRole("button", { name: "Light appearance", exact: true })
-    .click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await page.getByRole("button", { name: "Overview", exact: true }).click();
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
     path: "artifacts/light-desktop.png",
     fullPage: true,
   });
   await page.getByRole("button", { name: "Open studio", exact: false }).click();
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
     path: "artifacts/studio-light-desktop.png",
     fullPage: true,
@@ -135,6 +149,7 @@ test("mobile all screens, navigation, viewport and upload controls", async ({
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await expect(page.getByText("19 faces · mm")).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
     path: "artifacts/overview-mobile.png",
     fullPage: true,
@@ -152,7 +167,7 @@ test("mobile all screens, navigation, viewport and upload controls", async ({
     await page
       .locator("nav")
       .getByRole("button", {
-        name: name === "Inference Studio" ? "Inference Studio 3D" : name,
+        name,
         exact: true,
       })
       .click();
@@ -164,16 +179,85 @@ test("mobile all screens, navigation, viewport and upload controls", async ({
     );
     expect(overflow, `overflow on ${name}`).toBe(false);
     if (name === "Inference Studio") {
+      const title = await page
+        .getByRole("heading", { name, exact: true })
+        .boundingBox();
+      const exportButton = await page
+        .getByRole("button", { name: "Export report", exact: true })
+        .boundingBox();
+      expect(
+        Math.abs(
+          title!.y +
+            title!.height / 2 -
+            exportButton!.y -
+            exportButton!.height / 2,
+        ),
+      ).toBeLessThan(12);
       await page.getByRole("button", { name: "Face 002", exact: true }).click();
       await expect(page.getByText("face:1", { exact: true })).toBeVisible();
+      await page.evaluate(() => window.scrollTo(0, 0));
       await page.screenshot({
         path: "artifacts/studio-mobile.png",
         fullPage: true,
       });
     }
+    await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({
       path: `artifacts/${name.toLowerCase().replaceAll(" ", "-")}-mobile.png`,
       fullPage: true,
     });
   }
+});
+
+test("light lab layout persists over an old dark preference and supports a compact rail", async ({
+  page,
+}) => {
+  await page.addInitScript(() =>
+    localStorage.setItem("shapeops-theme", "dark"),
+  );
+  await page.goto("/#Inference%20Studio");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await expect(page.getByText("19 faces · mm")).toBeVisible();
+  const canvas = await page
+    .locator(".studio-canvas-panel canvas")
+    .boundingBox();
+  expect(canvas!.width).toBeGreaterThan(650);
+  expect(canvas!.height).toBeGreaterThanOrEqual(490);
+  await page
+    .getByRole("button", { name: "Collapse sidebar", exact: true })
+    .click();
+  await expect(page.locator(".app")).toHaveClass(/sidebar-collapsed/);
+  await page
+    .getByRole("button", { name: "Model Registry", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Model Registry", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: /surface-et-v2.*ExtraTreesClassifier/ })
+    .focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".model-card h2")).toHaveText("surface-et-v2");
+  await page
+    .getByRole("button", { name: "Inference Studio", exact: true })
+    .click();
+  for (const width of [1024, 768, 600]) {
+    await page.setViewportSize({ width, height: 1000 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > innerWidth,
+      ),
+      `overflow at ${width}`,
+    ).toBe(false);
+    await page
+      .getByRole("button", { name: "Reset camera", exact: true })
+      .click();
+  }
+  await page
+    .getByRole("button", { name: "Open navigation", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Model Registry", exact: true })
+    .click();
+  await expect(page.locator(".model-card h2")).toBeVisible();
 });
