@@ -14,10 +14,10 @@ This is a working local application milestone. The complete autonomous engineeri
 | 8 Monitoring/drift | Actual request metrics and OOD screening, local dashboard config | Durable cloud telemetry, validated drift history/reports, alert routing |
 | 9 Operations | Isolated injected adapter failure and recovery checks | Authorized release state and tested revision rollback |
 | 10 Security/reliability | Upload/runtime limits, cleanup, forbidden promotion, dependency audits | Worker memory sandbox, distributed abuse controls, OIDC |
-| 11 Containers/Kubernetes | Docker/Compose, Helm lint/render and Kind smoke script | Execute and fix actual image/cluster tests; image resource measurements |
-| 12 CI/CD | Quality workflow and deployment-preparation boundary | Confirm actual green hosted runs; protected production environment; publication/release/rollback pipeline |
+| 11 Containers/Kubernetes | Docker/Compose, Helm lint/render and Kind smoke script | Actual build/Kind inference/recovery/critical scan now pass; broader image sizing and Grafana verification remain |
+| 12 CI/CD | Quality workflow and deployment-preparation boundary | All four source CI jobs now green; protected production environment and full publication/release/rollback pipeline remain |
 | 13 Terraform/Azure readiness | Validated provider schema and bounded architecture | Security analysis, approved plan/cost/budget and durable storage adapters |
 | 14 Product audit | Backend/browser tests, screenshots, axe, benchmark, fixes | Full acceptance, container scans and full adversarial corpus |
 | 15 Azure | No resources provisioned | Explicit approval plus readiness before any deployment or purchase |
 
-Next: finish hosted CI and container/Kind validation, harden public input boundaries, complete persistent governance and cloud adapters, then obtain an approved costed deployment plan. Continue with natural cohesive commits and reviewable PRs; never manufacture 80–120 commits or sixteen PRs by trivial splitting.
+Next: preserve the passing CI/container/Kind baseline, harden public input boundaries, complete persistent governance and cloud adapters, then obtain an approved costed deployment plan. Continue with natural cohesive commits and reviewable PRs; never manufacture 80–120 commits or sixteen PRs by trivial splitting.

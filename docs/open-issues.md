@@ -4,7 +4,7 @@
 2. Complete immutable persistent registry/run records and candidate creation/promotion history. Current model manifests and in-memory records provide truthful local provenance, not a full lifecycle governance service.
 3. Add authenticated administrative OIDC/RBAC only when enabling privileged actions. Current production promotion is disabled with 403.
 4. Replace ephemeral local storage with a managed-identity cloud adapter and durable minimal telemetry export before production. Add retention for drill records and true validated drift reports/history.
-5. Hosted Docker image build and Kind deployment/inference/recovery now pass. Verify the Ubuntu runtime remediation against the actual critical image scan; the old Debian image has three blocking findings. Grafana runtime remains unverified. Local workstation lacks Docker/Kind.
+5. Hosted Docker image build and Kind deployment/inference/recovery now pass. Ubuntu runtime remediation is verified with zero critical image findings; the old Debian report remains historical evidence. Grafana runtime remains unverified. Local workstation lacks Docker/Kind.
 6. Expand evaluation beyond original analytic synthetic solids; calibrate probabilities and validate OOD thresholds on legally usable industrial CAD. Do not market this as BRepNet manufacturing-feature inference.
 7. Confirm current region-specific Azure price assumptions, budget amount, alert recipients, subscription eligibility and domain ownership/availability. No domain purchase or billable resources authorized.
 8. Complete candidate publication, authenticated release, immutable revision smoke validation, rollout and rollback workflows. Manual deployment-preparation workflow does not deploy.

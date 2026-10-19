@@ -1,0 +1,22 @@
+{
+  "run_id": 39309545540,
+  "url": "https://github.com/PeterYousefi/ShapeOps/actions/runs/39309545540",
+  "source_commit": "f3207c82ef5b68f6d496083e3ccc5f8f28e1ac74",
+  "conclusion": "success",
+  "jobs": {
+    "application": "success",
+    "container": "success",
+    "kubernetes": "success",
+    "terraform": "success"
+  },
+  "backend_tests": 17,
+  "browser_workflows": 3,
+  "axe_screen_theme_configurations": 12,
+  "container_os": "Ubuntu 26.04",
+  "container_critical_findings": 0,
+  "container_scan_scope": "Trivy vulnerabilities filtered to CRITICAL, unchanged blocking gate; not a claim of zero lower-severity findings",
+  "merged_pr": "https://github.com/PeterYousefi/ShapeOps/pull/1",
+  "merge_commit": "8fb1f387ea44cac849d9909edb6fb6efff18e3d1",
+  "azure_provisioned": false,
+  "production_contract_complete": false
+}

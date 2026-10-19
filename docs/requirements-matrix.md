@@ -20,8 +20,8 @@
 | Operations and isolated incident | Actual failure detection and stable inference checks | Verified; not a cloud rollback |
 | Privileged-operation protection | Promotion route returns 403; no cloud credentials | OIDC/RBAC and authorized administration unimplemented |
 | Upload/privacy/resource controls | Size/header/face/extent/triangle/time/rate/concurrency bounds | Pre-multipart declared/chunked body cap verified; stronger worker memory isolation still needed |
-| Docker | Multi-stage nonroot image and Compose | Hosted image build/startup passed; Ubuntu remediation scan pending |
-| Kubernetes | Helm lint/render passed; Kind smoke script | Hosted deployment, actual inference and single-instance recovery passed; latest runtime revalidation pending |
+| Docker | Multi-stage nonroot image and Compose | Hosted image build/startup and unchanged critical scan passed (zero critical findings) |
+| Kubernetes | Helm lint/render passed; Kind smoke script | Hosted Ubuntu deployment, actual inference and single-instance recovery passed |
 | Terraform | fmt/init/provider-schema validate passed | No Azure plan/apply/security scan performed |
 | CI/CD | GitHub quality and manual preparation workflows | Read actual runs; no automatic Azure deployment |
 | Git progress | Real cohesive commits pushed to private repository | No invented dates/engagement; numerical targets not artificially met |
