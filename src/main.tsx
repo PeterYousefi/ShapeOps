@@ -42,6 +42,7 @@ import {
   Zap,
 } from "lucide-react";
 import Viewer from "./Viewer";
+import PredictionDetails from "./PredictionDetails";
 import type { Result, Registry, Telemetry, Operations } from "./types";
 import { COLORS } from "./types";
 import "./styles.css";
@@ -411,6 +412,30 @@ function App() {
       count: result?.faces.filter((f) => f.prediction === label).length || 0,
     }))
     .filter((r) => r.count > 0);
+  const primaryStage =
+    registry.find((r) => r.id === result?.model)?.stage || "primary";
+  const comparisonStage =
+    registry.find((r) => r.id === result?.comparison_model)?.stage ||
+    "comparison";
+  const primaryLabel = `${primaryStage === "stable" ? "Stable" : primaryStage === "candidate" ? "Candidate" : "Primary"} · ${result?.model || "—"}`;
+  const comparisonLabel = `${comparisonStage === "stable" ? "Stable" : comparisonStage === "candidate" ? "Candidate" : "Comparison"} · ${result?.comparison_model || "—"}`;
+  useEffect(() => {
+    if (!result?.comparison_model)
+      setViewMode((v) =>
+        v === "alternate" || v === "disagreements" ? "prediction" : v,
+      );
+  }, [result]);
+  const changedFaces = result?.faces.filter((f) => f.disagreement) || [];
+  const studioHistogram = Object.keys(COLORS)
+    .map((label) => ({
+      label,
+      count:
+        result?.faces.filter(
+          (f) =>
+            (viewMode === "alternate" ? f.candidate : f.prediction) === label,
+        ).length || 0,
+    }))
+    .filter((g) => g.count);
   const heading = (
     <div className="page-heading">
       <div>
@@ -465,6 +490,7 @@ function App() {
           <button
             className="button secondary"
             disabled={!result}
+            aria-label="Export report"
             onClick={downloadReport}
           >
             <ArrowDownToLine size={15} /> Export report
@@ -749,14 +775,39 @@ function App() {
           {error && (
             <div className="alert red" role="alert">
               <TriangleAlert size={16} />
-              <span>{error}</span>
+              <div className="error-description">
+                <strong>
+                  {file && !/\.(step|stp)$/i.test(file.name)
+                    ? "Unsupported file format"
+                    : "Analysis could not complete"}
+                </strong>
+                <span>{error}</span>
+                {result && (
+                  <small>
+                    The last successful analysis is still available below.
+                  </small>
+                )}
+              </div>
               <button
                 onClick={() =>
-                  file ? upload(file) : void run(sample, model, compare)
+                  file && !/\.(step|stp)$/i.test(file.name)
+                    ? input.current?.click()
+                    : file
+                      ? upload(file)
+                      : void run(sample, model, compare)
                 }
               >
-                Retry
+                {file && !/\.(step|stp)$/i.test(file.name)
+                  ? "Choose another file"
+                  : "Retry"}
               </button>
+              {file &&
+                /\.(step|stp)$/i.test(file.name) &&
+                page === "Inference Studio" && (
+                  <button onClick={() => input.current?.click()}>
+                    Choose another file
+                  </button>
+                )}
               <button aria-label="Dismiss error" onClick={() => setError("")}>
                 <X size={14} />
               </button>
@@ -1048,12 +1099,14 @@ function App() {
                     <label htmlFor="sample">INPUT</label>
                     <select
                       id="sample"
-                      value={sample}
+                      value={file ? "__upload" : sample}
                       onChange={(e) => {
+                        if (e.target.value === "__upload") return;
                         setSample(e.target.value);
                         setFile(null);
                       }}
                     >
+                      {file && <option value="__upload">{file.name}</option>}
                       {SAMPLES.map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.name}
@@ -1123,13 +1176,13 @@ function App() {
                       ? `Uploading ${uploadProgress}%`
                       : "Upload complete. Parsing geometry and running inference…"}
                   </span>
-                  <progress value={uploadProgress} max={100} />
+                  <progress
+                    aria-label="STEP file upload"
+                    value={uploadProgress}
+                    max={100}
+                  />
                 </div>
               )}
-              <div className="lab-section-label">
-                <span>01 / GEOMETRY WORKSPACE</span>
-                <span>FACE-LEVEL SURFACE ANALYSIS</span>
-              </div>
               <div className="studio-layout">
                 <section className="panel studio-canvas-panel">
                   <div className="studio-canvas-header">
@@ -1141,9 +1194,13 @@ function App() {
                       <Badge
                         tone={result?.source === "sample" ? "blue" : "green"}
                       >
-                        {result?.source === "sample"
-                          ? "Sample CAD"
-                          : "Uploaded CAD"}
+                        {!result
+                          ? busy
+                            ? "Preparing CAD"
+                            : "No CAD loaded"
+                          : result.source === "sample"
+                            ? "Sample CAD"
+                            : "Uploaded CAD"}
                       </Badge>
                     </div>
                     <select
@@ -1151,9 +1208,21 @@ function App() {
                       value={viewMode}
                       onChange={(e) => setViewMode(e.target.value)}
                     >
-                      <option value="prediction">Prediction colors</option>
+                      <option value="prediction">
+                        {result?.comparison_model
+                          ? primaryLabel
+                          : "Prediction colors"}
+                      </option>
+                      {result?.comparison_model && (
+                        <option value="alternate">{comparisonLabel}</option>
+                      )}
                       <option value="solid">Solid geometry</option>
-                      <option value="disagreements">Disagreements</option>
+                      <option
+                        value="disagreements"
+                        disabled={!result?.comparison_model}
+                      >
+                        Disagreements
+                      </option>
                     </select>
                   </div>
                   <Viewer
@@ -1161,24 +1230,105 @@ function App() {
                     selected={selected}
                     onSelect={selectFace}
                     mode={viewMode}
+                    busy={busy}
                   />
-                  <div className="canvas-info">
-                    <div className="mini-legend">
-                      {histogram.map((h) => (
+                  {result?.comparison_model && (
+                    <div
+                      className="comparison-workbench"
+                      aria-label="Completed model comparison"
+                    >
+                      <div className="comparison-summary">
+                        <GitCompareArrows size={16} />
+                        <strong>
+                          {result.face_count - result.disagreements} /{" "}
+                          {result.face_count} agree
+                        </strong>
+                        <span>{result.disagreements} changed surfaces</span>
                         <button
-                          key={h.label}
+                          className="text-button"
+                          disabled={!changedFaces.length}
                           onClick={() => {
-                            const f = result?.faces.find(
-                              (f) => f.prediction === h.label,
+                            const i = changedFaces.findIndex(
+                              (f) => f.id === selected,
                             );
-                            if (f) setSelected(f.id);
+                            setSelected(
+                              changedFaces[(i + 1) % changedFaces.length].id,
+                            );
+                            setViewMode("disagreements");
                           }}
                         >
-                          <i style={{ background: COLORS[h.label] }} />
-                          {h.label}
-                          <b>{h.count}</b>
+                          Next disagreement <ArrowRight size={13} />
                         </button>
-                      ))}
+                      </div>
+                      <div
+                        className="comparison-layers"
+                        role="group"
+                        aria-label="Prediction layer"
+                      >
+                        <button
+                          aria-pressed={viewMode === "prediction"}
+                          onClick={() => setViewMode("prediction")}
+                        >
+                          {primaryLabel}
+                        </button>
+                        <button
+                          aria-pressed={viewMode === "alternate"}
+                          onClick={() => setViewMode("alternate")}
+                        >
+                          {comparisonLabel}
+                        </button>
+                        <button
+                          aria-pressed={viewMode === "disagreements"}
+                          onClick={() => setViewMode("disagreements")}
+                        >
+                          Differences <span>{result.disagreements}</span>
+                        </button>
+                      </div>
+                      {viewMode === "disagreements" && (
+                        <p>
+                          Amber = changed class · muted mint = agreement. Select
+                          a face to inspect both predictions.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  <div className="canvas-info">
+                    <div className="mini-legend">
+                      {viewMode === "disagreements" ? (
+                        <>
+                          <span>
+                            <i style={{ background: "#e7a85f" }} />
+                            Changed <b>{result?.disagreements ?? 0}</b>
+                          </span>
+                          <span>
+                            <i style={{ background: "#bacbc5" }} />
+                            Agreement{" "}
+                            <b>
+                              {(result?.face_count ?? 0) -
+                                (result?.disagreements ?? 0)}
+                            </b>
+                          </span>
+                        </>
+                      ) : (
+                        studioHistogram.map((h) => (
+                          <button
+                            key={h.label}
+                            onClick={() => {
+                              const f = result?.faces.find(
+                                (f) =>
+                                  (viewMode === "alternate"
+                                    ? f.candidate
+                                    : f.prediction) === h.label,
+                              );
+                              if (f) setSelected(f.id);
+                            }}
+                          >
+                            <i style={{ background: COLORS[h.label] }} />
+                            {h.label}
+                            <b>{h.count}</b>
+                          </button>
+                        ))
+                      )}
                     </div>
                     <span className="mono muted">
                       {result?.bounds.map((b) => b.toFixed(1)).join(" × ")} mm
@@ -1194,70 +1344,21 @@ function App() {
                     <span className="count">{result?.face_count || 0}</span>
                   </div>
                   <div className="inspector-body">
-                    <span className="eyebrow">
-                      {face ? "SELECTED FACE" : "INFERENCE SUMMARY"}
-                    </span>
-                    <h3>
-                      {face
-                        ? `Face ${String(face.id + 1).padStart(3, "0")}`
-                        : "Geometry intelligence"}
-                    </h3>
-                    <p>
-                      {face
-                        ? "Actual B-rep face and model output."
-                        : "Click a surface in the viewport or select a face below."}
-                    </p>
-                    {face ? (
-                      <>
-                        <div className="prediction-class">
-                          <i style={{ background: COLORS[face.prediction] }} />
-                          {face.prediction}
-                        </div>
-                        <div className="confidence-label">
-                          <span>Model confidence</span>
-                          <strong>{pct(face.confidence)}</strong>
-                        </div>
-                        <div className="confidence-bar">
-                          <i style={{ width: pct(face.confidence) }} />
-                        </div>
-                        <dl>
-                          <div>
-                            <dt>Surface area</dt>
-                            <dd>{face.area.toFixed(2)} mm²</dd>
-                          </div>
-                          <div>
-                            <dt>Boundary edges</dt>
-                            <dd>{face.edges}</dd>
-                          </div>
-                          <div>
-                            <dt>CAD surface type</dt>
-                            <dd>{face.surface}</dd>
-                          </div>
-                          <div>
-                            <dt>Face identifier</dt>
-                            <dd className="mono">face:{face.id}</dd>
-                          </div>
-                          {face.candidate && (
-                            <div>
-                              <dt>Comparison</dt>
-                              <dd>{face.candidate}</dd>
-                            </div>
-                          )}
-                        </dl>
-                      </>
-                    ) : (
+                    <PredictionDetails
+                      result={result}
+                      face={face}
+                      onSelect={selectFace}
+                      onClear={() => setSelected(null)}
+                      primaryLabel={primaryLabel}
+                      comparisonLabel={comparisonLabel}
+                    />
+                    <div className="inspector-separator" />
+                    <details className="execution-details">
+                      <summary>Execution & request metadata</summary>
                       <dl>
                         <div>
-                          <dt>Predicted faces</dt>
-                          <dd>{result?.face_count || "—"}</dd>
-                        </div>
-                        <div>
                           <dt>Boundary edges</dt>
-                          <dd>{result?.edge_count || "—"}</dd>
-                        </div>
-                        <div>
-                          <dt>Mean confidence</dt>
-                          <dd>{pct(result?.confidence)}</dd>
+                          <dd>{result?.edge_count ?? "—"}</dd>
                         </div>
                         <div>
                           <dt>Solid volume</dt>
@@ -1267,61 +1368,65 @@ function App() {
                               : "—"}
                           </dd>
                         </div>
-                      </dl>
-                    )}
-                    <div className="inspector-separator" />
-                    <div className="eyebrow">EXECUTION DETAILS</div>
-                    <dl>
-                      <div>
-                        <dt>Total latency</dt>
-                        <dd>{ms(result?.latency_ms)}</dd>
-                      </div>
-                      <div>
-                        <dt>CAD preprocessing</dt>
-                        <dd>
-                          {result?.source === "sample"
-                            ? "Cached geometry"
-                            : ms(result?.parse_ms)}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Model execution</dt>
-                        <dd>{ms(result?.execution_ms)}</dd>
-                      </div>
-                      <div>
-                        <dt>Model version</dt>
-                        <dd className="mono">
-                          {result?.model.replace("surface-", "") || "—"}
-                        </dd>
-                      </div>
-                      {result?.comparison_model && (
                         <div>
-                          <dt>Disagreements</dt>
+                          <dt>Total latency</dt>
+                          <dd>{ms(result?.latency_ms)}</dd>
+                        </div>
+                        <div>
+                          <dt>CAD preprocessing</dt>
                           <dd>
-                            {result.disagreements} / {result.face_count}
+                            {result?.source === "sample"
+                              ? "Cached geometry"
+                              : ms(result?.parse_ms)}
                           </dd>
                         </div>
-                      )}
-                    </dl>
+                        <div>
+                          <dt>Model execution</dt>
+                          <dd>{ms(result?.execution_ms)}</dd>
+                        </div>
+                        <div>
+                          <dt>Model version</dt>
+                          <dd className="mono">
+                            {result?.model.replace("surface-", "") || "—"}
+                          </dd>
+                        </div>
+                        {result?.comparison_model && (
+                          <div>
+                            <dt>Disagreements</dt>
+                            <dd>
+                              {result.disagreements} / {result.face_count}
+                            </dd>
+                          </div>
+                        )}
+                      </dl>
+                    </details>
                     <div
-                      className={"ood-note " + (result?.ood ? "warning" : "")}
+                      className={
+                        "ood-note " +
+                        (!result ? "unavailable" : result.ood ? "warning" : "")
+                      }
                     >
-                      <ShieldCheck size={16} />
+                      {result ? <ShieldCheck size={16} /> : <Info size={16} />}
                       <div>
                         <strong>
-                          {result?.ood
-                            ? "Outside reference distribution"
-                            : "Within reference distribution"}
+                          {!result
+                            ? "Reference screening unavailable"
+                            : result.ood
+                              ? "Outside reference distribution"
+                              : "Within reference distribution"}
                         </strong>
                         <p>
-                          Procedural geometry screening · not a calibrated
-                          industrial OOD guarantee.
+                          {result
+                            ? "Procedural geometry screening · not a calibrated industrial OOD guarantee."
+                            : "Run an analysis to calculate reference screening."}
                         </p>
                       </div>
                     </div>
                     <div className="trace-id">
                       <span>TRACE ID</span>
                       <button
+                        disabled={!result}
+                        aria-label="Copy request trace ID"
                         onClick={() => {
                           if (result) {
                             void navigator.clipboard.writeText(result.trace_id);
@@ -1361,7 +1466,7 @@ function App() {
                         <th>CONFIDENCE</th>
                         <th>AREA (mm²)</th>
                         <th>EDGES</th>
-                        {compare && <th>COMPARISON</th>}
+                        {result?.comparison_model && <th>COMPARISON</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -1374,6 +1479,7 @@ function App() {
                           <td>
                             <button
                               className="text-button mono"
+                              aria-pressed={selected === f.id}
                               onClick={() => setSelected(f.id)}
                             >
                               Face {String(f.id + 1).padStart(3, "0")}
@@ -1393,7 +1499,7 @@ function App() {
                           </td>
                           <td className="mono">{f.area.toFixed(2)}</td>
                           <td>{f.edges}</td>
-                          {compare && (
+                          {result?.comparison_model && (
                             <td>
                               {f.candidate ? (
                                 <Badge

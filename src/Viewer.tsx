@@ -358,8 +358,11 @@ export default function Viewer({
       {!result && !busy && (
         <div className="viewport-empty">
           <Box size={42} />
-          <h3>Your next insight starts with a shape</h3>
-          <p>Select a sample or upload a STEP model.</p>
+          <h3>No geometry loaded</h3>
+          <p>
+            Choose a sample and run inference, or upload a closed-solid STEP
+            file.
+          </p>
         </div>
       )}
       {error && (
@@ -377,6 +380,7 @@ export default function Viewer({
       </div>
       <div className="viewer-tools">
         <button
+          disabled={!result || !!error}
           title="Reset camera (0)"
           aria-label="Reset camera"
           onClick={() => api.current?.reset()}
@@ -385,6 +389,7 @@ export default function Viewer({
         </button>
         {selected !== null && (
           <button
+            disabled={!result || !!error}
             title="Focus selected face"
             aria-label="Focus selected face"
             onClick={() => api.current?.focus(selected)}
@@ -393,6 +398,7 @@ export default function Viewer({
           </button>
         )}
         <button
+          disabled={!result || !!error}
           title="Zoom in (+)"
           aria-label="Zoom in"
           onClick={() => api.current?.zoom(0.85)}
@@ -400,6 +406,7 @@ export default function Viewer({
           <ZoomIn size={16} />
         </button>
         <button
+          disabled={!result || !!error}
           title="Zoom out (-)"
           aria-label="Zoom out"
           onClick={() => api.current?.zoom(1.15)}
@@ -408,6 +415,7 @@ export default function Viewer({
         </button>
         <i />
         <button
+          disabled={!result || !!error}
           title="Toggle wireframe"
           aria-label="Toggle wireframe"
           aria-pressed={wire}
@@ -420,6 +428,7 @@ export default function Viewer({
           <Layers3 size={16} />
         </button>
         <button
+          disabled={!result || !!error}
           title="Expand viewport"
           aria-label="Expand viewport"
           onClick={() => {
