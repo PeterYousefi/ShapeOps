@@ -61,11 +61,11 @@ export default function Viewer({
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.1;
-    scene.add(new THREE.AmbientLight(0xa4c2ea, 2.1));
-    const light = new THREE.DirectionalLight(0xe6f0ff, 3.6);
+    scene.add(new THREE.AmbientLight(0xffffff, 1.8));
+    const light = new THREE.DirectionalLight(0xffffff, 2.5);
     light.position.set(60, -100, 200);
     scene.add(light);
-    const fill = new THREE.DirectionalLight(0x55cbbd, 1.2);
+    const fill = new THREE.DirectionalLight(0xd3e9e0, 1.0);
     fill.position.set(-90, 60, 40);
     scene.add(fill);
     const group = new THREE.Group();
@@ -80,16 +80,16 @@ export default function Viewer({
       geo.computeVertexNormals();
       const color =
         mode === "solid"
-          ? "#8fa4bd"
+          ? "#a1b6af"
           : mode === "disagreements"
             ? face.disagreement
               ? "#f1b567"
-              : "#53657b"
+              : "#bacbc5"
             : COLORS[face.prediction] || COLORS.Other;
       const mat = new THREE.MeshStandardMaterial({
-        color: selected === face.id ? "#f3c67c" : color,
-        metalness: 0.35,
-        roughness: 0.42,
+        color: selected === face.id ? "#e7a85f" : color,
+        metalness: 0.12,
+        roughness: 0.63,
         side: THREE.DoubleSide,
         polygonOffset: true,
         polygonOffsetFactor: 1,
@@ -117,16 +117,16 @@ export default function Viewer({
       max = Math.max(size.x, size.y, size.z);
     group.position.sub(center);
     scene.add(group);
-    const grid = new THREE.GridHelper(max * 4, 32, 0x3b5267, 0x25313e);
+    const grid = new THREE.GridHelper(max * 4, 32, 0xa6bdb2, 0xcbdad3);
     grid.rotation.x = Math.PI / 2;
     grid.position.z = -size.z / 2 - 0.5;
     const gm = grid.material as THREE.Material;
     gm.transparent = true;
-    gm.opacity = 0.33;
+    gm.opacity = 0.6;
     scene.add(grid);
     resources.push(grid.geometry, gm);
     const reset = () => {
-      camera.position.set(max * 1.18, -max * 1.4, max * 1.35);
+      camera.position.set(max * 1.02, -max * 1.2, max * 1.15);
       controls.target.set(0, 0, 0);
       controls.update();
     };
@@ -210,14 +210,14 @@ export default function Viewer({
     for (const mesh of materialRef.current) {
       const color =
         mode === "solid"
-          ? "#8fa4bd"
+          ? "#a1b6af"
           : mode === "disagreements"
             ? mesh.userData.disagreement
               ? "#f1b567"
-              : "#53657b"
+              : "#bacbc5"
             : COLORS[mesh.userData.prediction] || COLORS.Other;
       (mesh.material as THREE.MeshStandardMaterial).color.set(
-        selected === mesh.userData.face ? "#f3c67c" : color,
+        selected === mesh.userData.face ? "#e7a85f" : color,
       );
     }
   }, [selected, mode, result]);

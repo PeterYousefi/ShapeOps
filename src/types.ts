@@ -94,10 +94,10 @@ export type Operations = {
   promotion: string;
 };
 export const COLORS: Record<string, string> = {
-  Planar: "#7796c5",
-  Cylindrical: "#42d5c3",
-  Conical: "#b59ae8",
-  Spherical: "#e2bc73",
-  Toroidal: "#e391a0",
-  Other: "#93a0b4",
+  Planar: "#7b9fc5",
+  Cylindrical: "#6db8a7",
+  Conical: "#99bdb4",
+  Spherical: "#e7a85f",
+  Toroidal: "#c28d76",
+  Other: "#93a7a0",
 };
