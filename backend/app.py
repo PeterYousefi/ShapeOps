@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from backend.cad import SAMPLES, sample_shape, describe
 from backend.training import train, ROOT
-from backend.security import BodyLimitMiddleware
+from backend.security import AdmissionMiddleware, BodyLimitMiddleware, run_worker
 from backend.worker_limits import MAX_RESULT_BYTES
 
 logger = logging.getLogger("shapeops")
@@ -54,6 +54,7 @@ def rejected_body(scope):
 
 
 app.add_middleware(BodyLimitMiddleware, on_reject=rejected_body)
+app.add_middleware(AdmissionMiddleware, capacity=4)
 semaphore = asyncio.Semaphore(2)
 rates: defaultdict[str, deque[float]] = defaultdict(deque)
 
@@ -342,7 +343,9 @@ async def upload(
             raise ValueError("File is not an ISO 10303-21 STEP document.")
         async with semaphore:
             start = time.perf_counter()
-            geometry = await asyncio.to_thread(process_step, data)
+            # Cancellation must not release admission/worker slots while the native
+            # subprocess is still alive (its own wall timeout remains 30 seconds).
+            geometry = await run_worker(process_step, data)
             parse = (time.perf_counter() - start) * 1000
             return infer(
                 geometry,

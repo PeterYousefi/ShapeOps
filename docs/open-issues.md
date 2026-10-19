@@ -1,6 +1,6 @@
 # Open issues
 
-1. Public release hardening: pre-multipart transport caps are implemented. Disposable CAD workers now have CPU/file ceilings, bounded result files, discarded diagnostics and Linux address-space/data ceilings. Bound admission/wait queues, aggregate resources, filesystem/network access and distributed abuse state remain open. Local runtime is not approved for hostile public exposure.
+1. Public release hardening: pre-multipart transport caps are implemented. Disposable CAD workers now have CPU/file ceilings, bounded result files, discarded diagnostics and Linux address-space/data ceilings. Admission is now zero-wait and capped at four inference/drill requests per process before multipart parsing, with cancellation-safe CAD slot retention. Pre-body per-address throttling, slow-client deadlines, aggregate resources, filesystem/network access and distributed abuse state remain open. Local runtime is not approved for hostile public exposure.
 2. Complete immutable persistent registry/run records and candidate creation/promotion history. Current model manifests and in-memory records provide truthful local provenance, not a full lifecycle governance service.
 3. Add authenticated administrative OIDC/RBAC only when enabling privileged actions. Current production promotion is disabled with 403.
 4. Replace ephemeral local storage with a managed-identity cloud adapter and durable minimal telemetry export before production. Add retention for drill records and true validated drift reports/history.
