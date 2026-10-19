@@ -1,0 +1,19 @@
+name: Deployment preparation only
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: shapeops-production
+  cancel-in-progress: false
+jobs:
+  readiness:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Approval boundary
+        run: |
+          echo 'This workflow does not provision infrastructure or deploy.'
+          echo 'Azure deployment requires explicit owner authorization, OIDC configuration, completed scans and validated resource sizing.'
+          echo 'See docs/azure-readiness.md for the remaining release prerequisites.'

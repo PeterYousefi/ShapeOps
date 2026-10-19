@@ -1,0 +1,65 @@
+name: ShapeOps quality
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  application:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.14' }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: npm }
+      - run: sudo apt-get update && sudo apt-get install -y libgl1 libglu1-mesa libxrender1 libxext6 libsm6
+      - run: pip install -r requirements.txt
+      - run: npm ci
+      - run: python -m pytest -q
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Start application
+        run: |
+          uvicorn backend.app:app --port 8000 > /tmp/shapeops-api.log 2>&1 &
+          npm run dev -- --port 5173 > /tmp/shapeops-ui.log 2>&1 &
+          for attempt in $(seq 1 60); do curl -fsS http://127.0.0.1:8000/api/health && break || sleep 2; done
+          curl -fsS http://127.0.0.1:8000/api/health
+      - run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-evidence
+          path: |
+            artifacts/*.png
+            artifacts/evaluation.json
+            test-results/
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t shapeops:ci .
+      - uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: shapeops:ci
+          exit-code: '1'
+          severity: CRITICAL
+  kubernetes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4.3.0
+      - uses: helm/kind-action@v1.12.0
+        with: { install_only: true }
+      - run: ./scripts/kind-smoke.sh
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform -chdir=infra/terraform fmt -check
+      - run: terraform -chdir=infra/terraform init -backend=false
+      - run: terraform -chdir=infra/terraform validate

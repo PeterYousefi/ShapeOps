@@ -1,0 +1,29 @@
+services:
+  shapeops:
+    build: .
+    ports: ["127.0.0.1:8000:8000"]
+    cpus: 2
+    mem_limit: 3g
+    pids_limit: 128
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    tmpfs: ["/tmp:size=512m"]
+    volumes: ["telemetry:/app/.runtime"]
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    profiles: [monitoring]
+    volumes: ["./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro"]
+    ports: ["127.0.0.1:9090:9090"]
+  grafana:
+    image: grafana/grafana:12.2.0
+    profiles: [monitoring]
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+    volumes:
+      - ./monitoring/grafana:/etc/grafana/provisioning:ro
+      - ./monitoring/dashboard.json:/var/lib/grafana/dashboards/shapeops.json:ro
+    ports: ["127.0.0.1:3000:3000"]
+volumes:
+  telemetry:

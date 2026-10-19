@@ -1,0 +1,6 @@
+apiVersion: v2
+name: shapeops
+description: Local CAD inference platform; no cloud provisioning
+type: application
+version: 0.1.0
+appVersion: 0.1.0
