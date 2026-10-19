@@ -1,0 +1,14 @@
+{
+  "observed_at": "2026-10-19T20:19:19.083121+00:00",
+  "repository": "PeterYousefi/ShapeOps",
+  "visibility": "public",
+  "default_branch": "main",
+  "required_checks": [
+    "application",
+    "container",
+    "kubernetes",
+    "terraform"
+  ],
+  "verified": true,
+  "violations": []
+}
