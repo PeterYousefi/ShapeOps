@@ -10,3 +10,8 @@ playwright-report/
 .env
 *.tfstate*
 .terraform/
+
+.DS_Store
+*.tsbuildinfo
+artifacts/test-upload.step
+artifacts/overview-initial.png
