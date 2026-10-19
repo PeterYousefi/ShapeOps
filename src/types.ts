@@ -1,8 +1,103 @@
-export type Face={id:number;surface:string;prediction:string;confidence:number;area:number;edges:number;positions:number[];candidate:string|null;disagreement:boolean};
-export type Result={faces:Face[];name:string;source:string;face_count:number;edge_count:number;volume:number;bounds:number[];model:string;checksum:string;trace_id:string;latency_ms:number;parse_ms:number;execution_ms:number;confidence:number;ood:boolean;ood_score:number;ood_contributions:{feature:string;deviation:number}[];disagreements:number;comparison_model:string|null};
-export type Registry={id:string;stage:string;framework:string;runtime:string;algorithm:string;checksum:string;dataset_hash:string;license:string;training_rows:number;evaluation_rows:number;accuracy:number;macro_f1:number;heldout_log_loss:number;package_checksum:string;git_commit:string;classes:string[];limitations:string;gates:Record<string,boolean>;parameters:Record<string,unknown>};
-export type RequestRow={id:string;at:number;source:string;model:string;success:number;latency:number;parse:number;execution:number;faces:number;confidence:number;ood:number;error:string};
-export type Telemetry={total:number;successful:number;failed:number;p50:number|null;p95:number|null;ood_rate:number|null;origin:string;requests:RequestRow[];throughput_per_minute:number};
-export type Drill={id:string;at:number;passed:boolean;duration_ms:number;scope:string;checks:{name:string;passed:boolean}[]};
-export type Operations={active:string;candidate:string;environment:string;production:string;release_history:unknown[];drills:Drill[];promotion:string};
-export const COLORS:Record<string,string>={Planar:'#7796c5',Cylindrical:'#42d5c3',Conical:'#b59ae8',Spherical:'#e2bc73',Toroidal:'#e391a0',Other:'#93a0b4'};
+export type Face = {
+  id: number;
+  surface: string;
+  prediction: string;
+  confidence: number;
+  area: number;
+  edges: number;
+  positions: number[];
+  candidate: string | null;
+  disagreement: boolean;
+};
+export type Result = {
+  faces: Face[];
+  name: string;
+  source: string;
+  face_count: number;
+  edge_count: number;
+  volume: number;
+  bounds: number[];
+  model: string;
+  checksum: string;
+  trace_id: string;
+  latency_ms: number;
+  parse_ms: number;
+  execution_ms: number;
+  confidence: number;
+  ood: boolean;
+  ood_score: number;
+  ood_contributions: { feature: string; deviation: number }[];
+  disagreements: number;
+  comparison_model: string | null;
+};
+export type Registry = {
+  id: string;
+  stage: string;
+  framework: string;
+  runtime: string;
+  algorithm: string;
+  checksum: string;
+  dataset_hash: string;
+  license: string;
+  training_rows: number;
+  evaluation_rows: number;
+  accuracy: number;
+  macro_f1: number;
+  heldout_log_loss: number;
+  package_checksum: string;
+  git_commit: string;
+  classes: string[];
+  limitations: string;
+  gates: Record<string, boolean>;
+  parameters: Record<string, unknown>;
+};
+export type RequestRow = {
+  id: string;
+  at: number;
+  source: string;
+  model: string;
+  success: number;
+  latency: number;
+  parse: number;
+  execution: number;
+  faces: number;
+  confidence: number;
+  ood: number;
+  error: string;
+};
+export type Telemetry = {
+  total: number;
+  successful: number;
+  failed: number;
+  p50: number | null;
+  p95: number | null;
+  ood_rate: number | null;
+  origin: string;
+  requests: RequestRow[];
+  throughput_per_minute: number;
+};
+export type Drill = {
+  id: string;
+  at: number;
+  passed: boolean;
+  duration_ms: number;
+  scope: string;
+  checks: { name: string; passed: boolean }[];
+};
+export type Operations = {
+  active: string;
+  candidate: string;
+  environment: string;
+  production: string;
+  release_history: unknown[];
+  drills: Drill[];
+  promotion: string;
+};
+export const COLORS: Record<string, string> = {
+  Planar: "#7796c5",
+  Cylindrical: "#42d5c3",
+  Conical: "#b59ae8",
+  Spherical: "#e2bc73",
+  Toroidal: "#e391a0",
+  Other: "#93a0b4",
+};

@@ -1,0 +1,114 @@
+{
+  "conditions": {
+    "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+    "processor": "arm64",
+    "python": "3.14.7",
+    "concurrency": 1,
+    "sample_geometry": "preprocessed and cached at startup",
+    "scope": "Ten real local sample requests; not upload parsing or cloud performance."
+  },
+  "requests": [
+    {
+      "model": "surface-rf-v1",
+      "sample": "bracket",
+      "client_ms": 26.26204100670293,
+      "server_ms": 10.03116596257314,
+      "execution_ms": 6.6890420275740325,
+      "faces": 19,
+      "mean_confidence": 0.8384995941403977,
+      "disagreements": 0
+    },
+    {
+      "model": "surface-rf-v1",
+      "sample": "flange",
+      "client_ms": 28.76766596455127,
+      "server_ms": 11.849874979816377,
+      "execution_ms": 6.101207982283086,
+      "faces": 10,
+      "mean_confidence": 0.7899296258032662,
+      "disagreements": 0
+    },
+    {
+      "model": "surface-rf-v1",
+      "sample": "housing",
+      "client_ms": 18.268957966938615,
+      "server_ms": 9.904749982524663,
+      "execution_ms": 7.945084013044834,
+      "faces": 19,
+      "mean_confidence": 0.8384995941403977,
+      "disagreements": 4
+    },
+    {
+      "model": "surface-rf-v1",
+      "sample": "shaft",
+      "client_ms": 18.230749992653728,
+      "server_ms": 8.955500030424446,
+      "execution_ms": 6.705375039018691,
+      "faces": 7,
+      "mean_confidence": 0.8371904305733591,
+      "disagreements": 0
+    },
+    {
+      "model": "surface-rf-v1",
+      "sample": "manifold",
+      "client_ms": 20.615375018678606,
+      "server_ms": 9.666165977250785,
+      "execution_ms": 6.628250004723668,
+      "faces": 11,
+      "mean_confidence": 0.8484968431977831,
+      "disagreements": 1
+    },
+    {
+      "model": "surface-et-v2",
+      "sample": "bracket",
+      "client_ms": 25.949208007659763,
+      "server_ms": 11.736624990589917,
+      "execution_ms": 7.489375013392419,
+      "faces": 19,
+      "mean_confidence": 0.858679629140579,
+      "disagreements": 0
+    },
+    {
+      "model": "surface-et-v2",
+      "sample": "flange",
+      "client_ms": 32.49425004469231,
+      "server_ms": 13.962834025733173,
+      "execution_ms": 7.933542015962303,
+      "faces": 10,
+      "mean_confidence": 0.8232372799177329,
+      "disagreements": 0
+    },
+    {
+      "model": "surface-et-v2",
+      "sample": "housing",
+      "client_ms": 17.81533396570012,
+      "server_ms": 9.568542009219527,
+      "execution_ms": 7.502833032049239,
+      "faces": 19,
+      "mean_confidence": 0.7817960968350328,
+      "disagreements": 4
+    },
+    {
+      "model": "surface-et-v2",
+      "sample": "shaft",
+      "client_ms": 21.013707970269024,
+      "server_ms": 9.60958399809897,
+      "execution_ms": 7.515250006690621,
+      "faces": 7,
+      "mean_confidence": 0.8105275776546056,
+      "disagreements": 0
+    },
+    {
+      "model": "surface-et-v2",
+      "sample": "manifold",
+      "client_ms": 20.855957991443574,
+      "server_ms": 9.528958005830646,
+      "execution_ms": 6.769749976228923,
+      "faces": 11,
+      "mean_confidence": 0.9000899131871679,
+      "disagreements": 1
+    }
+  ],
+  "median_client_ms": 20.9348329808563,
+  "max_client_ms": 32.49425004469231
+}

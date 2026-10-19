@@ -147,6 +147,7 @@ def describe(shape, mesh=True):
     if max(box.xlen, box.ylen, box.zlen) > 10000:
         raise ValueError("Geometry exceeds the 10,000 mm extent limit.")
     result = []
+    total_coordinates = 0
     for i, f in enumerate(faces):
         item = {
             "id": i,
@@ -163,6 +164,11 @@ def describe(shape, mesh=True):
                 for j in tri
                 for q in vertices[j].toTuple()
             ]
+            total_coordinates += len(item["positions"])
+            if total_coordinates > 4500000:
+                raise ValueError(
+                    "Total tessellation exceeds the 500,000 triangle rendering limit."
+                )
             if len(item["positions"]) > 900000:
                 raise ValueError("Face tessellation exceeds the rendering limit.")
         result.append(item)

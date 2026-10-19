@@ -1,0 +1,23 @@
+# Roadmap — preserve completed work
+
+This is a working local application milestone. The complete autonomous engineering contract is **not fully satisfied**. Do not mark a phase complete when its remaining acceptance criteria are unresolved.
+
+| Phase | Implemented milestone | Remaining acceptance |
+| --- | --- | --- |
+| 1 Foundation | Local repo, specification, AGENTS, GitHub private remote, tooling | Hosted CI green; issue/review history |
+| 2 CAD | Real STEP parsing, topology validation, tessellation, five upload round-trips | Broader corpus and pathological inputs; transport body cap now implemented |
+| 3 Inference | Trained analytic baselines and face-aware runtime | Industrial data/generalization and calibration |
+| 4 Frontend | Six screens, upload workflow, interactive viewer, responsive themes | Additional device/assistive-technology checks |
+| 5 Comparison | Distinct model versions, probabilities, disagreements and coloring | Broader regression corpus |
+| 6 Registry/governance | Artifact packages, provenance, cards, pure gate evaluation | Long-lived immutable registry/run records, approvals and release lineage |
+| 7 Training/evaluation | Reproducible procedural pipeline, holdout report, regression checks | External dataset contracts, bounded candidate task and publication workflow |
+| 8 Monitoring/drift | Actual request metrics and OOD screening, local dashboard config | Durable cloud telemetry, validated drift history/reports, alert routing |
+| 9 Operations | Isolated injected adapter failure and recovery checks | Authorized release state and tested revision rollback |
+| 10 Security/reliability | Upload/runtime limits, cleanup, forbidden promotion, dependency audits | Worker memory sandbox, distributed abuse controls, OIDC |
+| 11 Containers/Kubernetes | Docker/Compose, Helm lint/render and Kind smoke script | Execute and fix actual image/cluster tests; image resource measurements |
+| 12 CI/CD | Quality workflow and deployment-preparation boundary | Confirm actual green hosted runs; protected production environment; publication/release/rollback pipeline |
+| 13 Terraform/Azure readiness | Validated provider schema and bounded architecture | Security analysis, approved plan/cost/budget and durable storage adapters |
+| 14 Product audit | Backend/browser tests, screenshots, axe, benchmark, fixes | Full acceptance, container scans and full adversarial corpus |
+| 15 Azure | No resources provisioned | Explicit approval plus readiness before any deployment or purchase |
+
+Next: finish hosted CI and container/Kind validation, harden public input boundaries, complete persistent governance and cloud adapters, then obtain an approved costed deployment plan. Continue with natural cohesive commits and reviewable PRs; never manufacture 80–120 commits or sixteen PRs by trivial splitting.

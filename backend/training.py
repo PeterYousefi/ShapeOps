@@ -1,6 +1,6 @@
 """Reproducible surface-classification baseline on owned procedural solids."""
 
-import hashlib, json, subprocess, platform
+import hashlib, json, subprocess, platform, os
 from pathlib import Path
 import numpy as np
 import cadquery as cq
@@ -43,6 +43,10 @@ def train():
                 groups.append(i)
     x = np.array(x)
     y = np.array(y)
+    if not np.isfinite(x).all() or x.shape[1] != 6 or len(set(y)) != 5:
+        raise ValueError(
+            "Training dataset failed finite-feature or class-coverage validation"
+        )
     # Split by generated parameter set to avoid identical solid leakage.
     train_mask = np.array(groups) < 80
     test_mask = ~train_mask
@@ -77,6 +81,26 @@ def train():
         ).strip()
     except Exception:
         commit = "uncommitted"
+    source_paths = [
+        ROOT / "backend" / name for name in ["cad.py", "training.py", "governance.py"]
+    ]
+    source_hash = hashlib.sha256(
+        b"".join(p.read_bytes() for p in source_paths)
+    ).hexdigest()
+    lock_path = ROOT / "requirements.txt"
+    environment_hash = (
+        hashlib.sha256(lock_path.read_bytes()).hexdigest()
+        if lock_path.exists()
+        else "unlocked"
+    )
+    try:
+        dirty = bool(
+            subprocess.check_output(
+                ["git", "status", "--porcelain", "--", "backend"], cwd=ROOT, text=True
+            ).strip()
+        )
+    except Exception:
+        dirty = True
     for name, stage, model in configs:
         model.fit(x[train_mask], y[train_mask])
         pred = model.predict(x[test_mask])
@@ -94,11 +118,7 @@ def train():
         canonical = json.dumps(trees, sort_keys=True).encode()
         sha = hashlib.sha256(canonical).hexdigest()
         package_dir = (
-            Path(
-                __import__("os").environ.get(
-                    "SHAPEOPS_DATA_DIR", str(ROOT / ".runtime")
-                )
-            )
+            Path(os.environ.get("SHAPEOPS_DATA_DIR", str(ROOT / ".runtime")))
             / "models"
             / sha
         )
@@ -134,6 +154,9 @@ def train():
             "accuracy": float(accuracy_score(y[test_mask], pred)),
             "macro_f1": float(f1_score(y[test_mask], pred, average="macro")),
             "git_commit": commit,
+            "source_hash": source_hash,
+            "git_dirty": dirty,
+            "environment_hash": environment_hash,
             "classes": model.classes_.tolist(),
             "features": [
                 "min curvature",

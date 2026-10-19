@@ -1,0 +1,10 @@
+{
+  "scope": "Prior 15-test local backend run, before two transport-limit tests were added",
+  "tool": "macOS /usr/bin/time -l",
+  "wall_seconds": 46.95,
+  "user_seconds": 41.41,
+  "system_seconds": 2.96,
+  "maximum_resident_set_bytes": 648249344,
+  "peak_memory_footprint_bytes": 438978168,
+  "limitations": "Test-process resource observations; not service/container sizing or cloud measurements."
+}
