@@ -10,3 +10,5 @@
 - 2026-10-19: Create private PeterYousefi/ShapeOps repository because no intended existing repository was found. No existing repository visibility changed.
 - 2026-10-19: Validate desktop/mobile screenshots, correct contrast/light/mobile/camera/upload identity issues, and retain browser/axe tests as evidence.
 - 2026-10-19: Prepare bounded Docker/Helm/Terraform/CI configuration; do not claim Docker/Kind/cloud validation based on syntax checks or local UI success.
+- 2026-10-19: Hosted container image build succeeded, but the pinned older Trivy action failed during binary installation before scanning. Replace it with the official Trivy container at the actual published release 0.76.0; do not interpret installer failure as a vulnerability finding or a clean scan.
+- 2026-10-19: Add pre-multipart content-length and chunked-body caps with failed-request telemetry; the expanded 17-test backend suite passes. Native worker resource isolation remains separate future work.

@@ -3832,3 +3832,14 @@ body {
 [data-theme="light"] .button.secondary:hover {
   background: #e7edf4;
 }
+.panel-header > .muted {
+  font-size: 10px;
+  line-height: 1.5;
+  text-align: right;
+}
+@media (max-width: 500px) {
+  .panel-header > .muted {
+    font-size: 8px;
+    max-width: 45%;
+  }
+}
