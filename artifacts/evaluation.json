@@ -1,0 +1,160 @@
+{
+  "seed": 42,
+  "dataset_hash": "5920a40d7ed2f95f3467f59fd11148d9556aef9e8fde1021328e41f20f4554a6",
+  "models": [
+    {
+      "id": "surface-rf-v1",
+      "stage": "stable",
+      "framework": "scikit-learn 1.9.1",
+      "runtime": "Python 3.14.7 \u00b7 CPU",
+      "algorithm": "RandomForestClassifier",
+      "parameters": {
+        "bootstrap": true,
+        "ccp_alpha": 0.0,
+        "class_weight": null,
+        "criterion": "gini",
+        "max_depth": 3,
+        "max_features": "sqrt",
+        "max_leaf_nodes": null,
+        "max_samples": null,
+        "min_impurity_decrease": 0.0,
+        "min_samples_leaf": 1,
+        "min_samples_split": 2,
+        "min_weight_fraction_leaf": 0.0,
+        "monotonic_cst": null,
+        "n_estimators": 24,
+        "n_jobs": null,
+        "oob_score": false,
+        "random_state": 42,
+        "verbose": 0,
+        "warm_start": false
+      },
+      "checksum": "1ea804ca731ca4428b4b1226efe53051f3bb14512a5920b9a3457920f177595d",
+      "dataset_hash": "5920a40d7ed2f95f3467f59fd11148d9556aef9e8fde1021328e41f20f4554a6",
+      "license": "MIT (ShapeOps procedural data and training code)",
+      "training_rows": 1200,
+      "evaluation_rows": 300,
+      "accuracy": 0.9733333333333334,
+      "macro_f1": 0.9464285714285715,
+      "git_commit": "020cdee3dbaea2f374cb0cf608d1277b580af0e7",
+      "classes": [
+        "Conical",
+        "Cylindrical",
+        "Planar",
+        "Spherical",
+        "Toroidal"
+      ],
+      "features": [
+        "min curvature",
+        "max curvature",
+        "min curvature range",
+        "max curvature range",
+        "area",
+        "edge count"
+      ],
+      "limitations": "Analytic surface baseline on synthetic solids. Not manufacturing-feature segmentation. Probabilities are uncalibrated; synthetic held-out metrics do not establish performance on industrial CAD.",
+      "gates": {
+        "quality": true,
+        "compatibility": true,
+        "license": true,
+        "security": false
+      }
+    },
+    {
+      "id": "surface-et-v2",
+      "stage": "candidate",
+      "framework": "scikit-learn 1.9.1",
+      "runtime": "Python 3.14.7 \u00b7 CPU",
+      "algorithm": "ExtraTreesClassifier",
+      "parameters": {
+        "bootstrap": false,
+        "ccp_alpha": 0.0,
+        "class_weight": null,
+        "criterion": "gini",
+        "max_depth": 12,
+        "max_features": "sqrt",
+        "max_leaf_nodes": null,
+        "max_samples": null,
+        "min_impurity_decrease": 0.0,
+        "min_samples_leaf": 1,
+        "min_samples_split": 2,
+        "min_weight_fraction_leaf": 0.0,
+        "monotonic_cst": null,
+        "n_estimators": 64,
+        "n_jobs": null,
+        "oob_score": false,
+        "random_state": 42,
+        "verbose": 0,
+        "warm_start": false
+      },
+      "checksum": "755c319f3f9d4ec51dd52bf7ea37facc8fa9657e58f0dcd7ecad904a65290849",
+      "dataset_hash": "5920a40d7ed2f95f3467f59fd11148d9556aef9e8fde1021328e41f20f4554a6",
+      "license": "MIT (ShapeOps procedural data and training code)",
+      "training_rows": 1200,
+      "evaluation_rows": 300,
+      "accuracy": 1.0,
+      "macro_f1": 1.0,
+      "git_commit": "020cdee3dbaea2f374cb0cf608d1277b580af0e7",
+      "classes": [
+        "Conical",
+        "Cylindrical",
+        "Planar",
+        "Spherical",
+        "Toroidal"
+      ],
+      "features": [
+        "min curvature",
+        "max curvature",
+        "min curvature range",
+        "max curvature range",
+        "area",
+        "edge count"
+      ],
+      "limitations": "Analytic surface baseline on synthetic solids. Not manufacturing-feature segmentation. Probabilities are uncalibrated; synthetic held-out metrics do not establish performance on industrial CAD.",
+      "gates": {
+        "quality": true,
+        "compatibility": true,
+        "license": true,
+        "security": false
+      }
+    }
+  ],
+  "reference": [
+    [
+      19.0,
+      48.0,
+      18.0,
+      72.0,
+      100.0
+    ],
+    [
+      10.0,
+      21.0,
+      32.0,
+      80.0,
+      80.0
+    ],
+    [
+      19.0,
+      48.0,
+      35.0,
+      60.0,
+      85.0
+    ],
+    [
+      7.0,
+      9.0,
+      44.0,
+      44.0,
+      74.0
+    ],
+    [
+      11.0,
+      27.0,
+      40.0000002,
+      55.0000002,
+      78.0
+    ]
+  ],
+  "scope": "Owned procedural analytic CAD. Parameter-group held-out split."
+}
