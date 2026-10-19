@@ -15,3 +15,5 @@ Verified on the local Apple Silicon workstation, Python 3.14.7, Node/Vite toolch
 Screenshot capture and visual inspection covered all six screens, desktop/mobile, and optional light styling. Corrections included light-theme root background, readable contrast, mobile inspector flow, camera persistence after selection, and keeping previous successful-file identity after a rejected upload.
 
 Not verified locally: Docker build/run, Kind rollout/recovery, Grafana container rendering, container image scans, Terraform security analysis or authenticated Azure planning, production authentication/storage/rollouts/domain/TLS. GitHub hosted status is independent of local passes and must be checked against actual run conclusions.
+
+Hosted source run [39308066260](https://github.com/PeterYousefi/ShapeOps/actions/runs/39308066260) passed application, Terraform and Kubernetes jobs, including real inference and restart recovery. Its container scan properly blocked three critical Debian base-library findings. The original report is tracked; Ubuntu runtime remediation at 993930d must pass a fresh unchanged critical scan and native smoke tests before that gate can clear.

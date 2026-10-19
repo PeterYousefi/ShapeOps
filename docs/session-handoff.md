@@ -22,13 +22,15 @@ Prior 15-test local process: 46.95s wall, maximum resident set ~648 MB, peak mem
 
 ## Git/GitHub
 
-Private remote: https://github.com/PeterYousefi/ShapeOps . Authenticated account PeterYousefi; configured author Pouya / yousefipouya@gmail.com was preserved, not changed. Initial five milestones on main; active branch `feat/verified-interface`. Last verified pushed implementation commits include `7c44a49` (UI audit) and `18beb57` (source/environment provenance); workflow fix `fe3d722` is the next pushed milestone. Inspect `git log`, `git status`, `git branch -vv` and actual GitHub runs for the latest state. Never count draft PRs as merged. No achievements are claimed.
+Private remote: https://github.com/PeterYousefi/ShapeOps . Authenticated account PeterYousefi; configured author Pouya / yousefipouya@gmail.com was preserved, not changed. Initial five milestones on main; active branch `feat/verified-interface`. Last verified pushed source milestone is `993930d` (Ubuntu runtime remediation); previous milestones include `b5528a7` (transport caps) and `ab654c2` (Kind restart recovery). Inspect `git log`, `git status`, `git branch -vv` and actual GitHub runs for the latest state. Never count draft PRs as merged. No achievements are claimed.
 
-A draft PR is being opened for this branch; inspect GitHub rather than create duplicates. Initial main CI run 39306489764 passed Terraform, executed application tests/build and started Kind; container setup failed because of an invalid Trivy action tag. The feature branch pins its actual published SHA and adds Python quality/audit gates. Check subsequent runs and fix failures; do not merge failing changes.
+Draft PR #1 exists and is attached to this chat: https://github.com/PeterYousefi/ShapeOps/pull/1 . Do not create duplicates. There are two substantive open issues (#2 public-input/worker hardening and #3 persistent governance/cloud adapters), zero merged PRs as of this checkpoint, and no claimed achievements.
+
+Hosted CI run 39308066260 completed: application success (tests/build/browser), Terraform success, Kubernetes success (actual image load/deployment, readiness, genuine inference and Recreate restart recovery), container scan failure. The scan identified three critical Debian 12 base-library CVEs, preserved in artifacts/container-audit-debian.json. Do not ignore or downgrade that gate. Source commit 993930d changes the runtime to Ubuntu 26.04 with Python 3.14 in a venv after vendor-advisory review; its actual fresh scan/native/Kind validation is pending. See docs/ci-results.md and current GitHub runs. Merge only after the current source checks pass.
 
 ## Pending engineering
 
-See open-issues.md, roadmap.md and requirements-matrix.md. Highest priorities: finish actual hosted Docker/Kind/image scans; stronger native worker resource isolation and distributed abuse controls; long-lived immutable registry/candidate/history; OIDC/RBAC before enabling privileged actions; durable cloud adapters and telemetry export; industrial evaluation/calibration and validated drift. Prepare an approved costed Azure plan only after those prerequisites. The YAML preparation workflow performs no deployment.
+See open-issues.md, roadmap.md and requirements-matrix.md. Highest priorities: finish the Ubuntu image remediation and current hosted validation; stronger native worker resource isolation and distributed abuse controls; long-lived immutable registry/candidate/history; OIDC/RBAC before enabling privileged actions; durable cloud adapters and telemetry export; industrial evaluation/calibration and validated drift. Prepare an approved costed Azure plan only after those prerequisites. The YAML preparation workflow performs no deployment.
 
 ## Next executable steps
 

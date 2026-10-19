@@ -73,7 +73,7 @@ The bounded ten-request local cached-sample benchmark measured approximately **2
 
 Uploads are capped at 10 MB, 600 faces and 30 seconds of parsing. Temporary files are deleted on success or failure. Public promotion is disabled. A streaming transport body cap is implemented, including chunked-body enforcement. Additional worker memory isolation, distributed abuse controls, authenticated administration and durable cloud adapters are required before public production.
 
-Docker/Kind execution, image scans, Azure plans, production deployment, domain registration, durable cloud storage and live revision rollback remain unverified or unimplemented. No Azure infrastructure has been provisioned. `shapeops.dev` is proposed and unverified. See [open issues](docs/open-issues.md) and [Azure readiness](docs/azure-readiness.md).
+Hosted CI has verified image build, initial Kind deployment, genuine inference smoke and single-instance restart recovery. The original Debian image scan found three critical base-library findings; the Ubuntu 26.04 remediation is being revalidated with the same blocking gate. Azure plans, production deployment, domain registration, durable cloud storage and live cloud revision rollback remain unverified or unimplemented. No Azure infrastructure has been provisioned. `shapeops.dev` is proposed and unverified. See [open issues](docs/open-issues.md) and [Azure readiness](docs/azure-readiness.md).
 
 ![Responsive ShapeOps workspace](artifacts/overview-mobile.png)
 
