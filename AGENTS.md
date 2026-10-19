@@ -1,0 +1,2 @@
+# ShapeOps engineering instructions
+Read docs/session-handoff.md before continuing. Do not fabricate inference, telemetry, metrics, or completed verification. Keep sample geometry labeled. Preserve face IDs from CAD parsing through mesh selection. Do not provision paid infrastructure or deploy without explicit approval. Commit cohesive verified work, never manufacture history. Run backend tests, frontend typecheck/build and browser tests for relevant changes. Update progress and handoff documents with actual outcomes.
