@@ -17,6 +17,9 @@ metadata:
   name: shapeops
 spec:
   replicas: 1
+  # Disposable single-instance cluster: release resources before replacement.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: shapeops
