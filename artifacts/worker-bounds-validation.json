@@ -37,7 +37,23 @@
     "All five real sample STEP round-trips",
     "Real browser sample and STEP upload/comparison flows"
   ],
-  "linux_verification": "Pending required hosted application and container-native Kind upload/restart checks. Not claimed from macOS passes.",
+  "linux_verification": {
+    "source_commit": "5b85d2a92a98f973ee2ce6af126695ec87d29ab5",
+    "run_id": 39333830779,
+    "url": "https://github.com/PeterYousefi/ShapeOps/actions/runs/39333830779",
+    "checks": {
+      "application": "success",
+      "container": "success",
+      "kubernetes": "success",
+      "terraform": "success"
+    },
+    "python_tests_passed": 43,
+    "python_tests_seconds": 17.51,
+    "playwright_checks_passed": 10,
+    "native_container_upload_before_restart": "10 faces, passed",
+    "native_container_upload_after_restart": "10 faces, passed",
+    "note": "Actual hosted log results. Linux-only probe ran without a skip; native worker imported/parsed genuine STEP inside the nonroot application container."
+  },
   "remaining": [
     "Filesystem/network isolation",
     "Bounded admission/wait queues",
