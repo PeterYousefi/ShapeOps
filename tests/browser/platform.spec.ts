@@ -213,4 +213,26 @@ test("light lab layout persists over an old dark preference and supports a compa
     .focus();
   await page.keyboard.press("Enter");
   await expect(page.locator(".model-card h2")).toHaveText("surface-et-v2");
+  await page
+    .getByRole("button", { name: "Inference Studio", exact: true })
+    .click();
+  for (const width of [1024, 768, 600]) {
+    await page.setViewportSize({ width, height: 1000 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > innerWidth,
+      ),
+      `overflow at ${width}`,
+    ).toBe(false);
+    await page
+      .getByRole("button", { name: "Reset camera", exact: true })
+      .click();
+  }
+  await page
+    .getByRole("button", { name: "Open navigation", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Model Registry", exact: true })
+    .click();
+  await expect(page.locator(".model-card h2")).toBeVisible();
 });

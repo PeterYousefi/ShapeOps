@@ -673,6 +673,7 @@ function App() {
           </button>
           <button
             className="nav-item collapse-btn"
+            aria-label={collapsed ? "Expand navigation" : "Collapse sidebar"}
             onClick={() => setCollapsed(!collapsed)}
           >
             {collapsed ? (

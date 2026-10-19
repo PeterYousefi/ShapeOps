@@ -913,3 +913,36 @@ td {
     grid-template-columns: 1fr;
   }
 }
+@media (min-width: 701px) and (max-width: 1000px) {
+  .app {
+    --sidebar-width: 70px;
+  }
+}
+@media (min-width: 501px) and (max-width: 700px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  .mobile-open .sidebar {
+    transform: translateX(0);
+  }
+  .mobile-menu {
+    display: flex;
+  }
+  .mobile-open .mobile-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: #263d3240;
+    z-index: 39;
+  }
+  .sidebar .brand > span:last-child,
+  .sidebar .nav-label,
+  .sidebar .nav-item > span,
+  .sidebar .local-card,
+  .sidebar .profile > div:not(.avatar) {
+    display: block;
+  }
+  .sidebar .workspace-switch {
+    display: flex;
+  }
+}

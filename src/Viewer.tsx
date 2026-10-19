@@ -125,8 +125,11 @@ export default function Viewer({
     gm.opacity = 0.6;
     scene.add(grid);
     resources.push(grid.geometry, gm);
+    let fitScale = 1;
     const reset = () => {
-      camera.position.set(max * 1.02, -max * 1.2, max * 1.15);
+      camera.position
+        .set(max * 1.02, -max * 1.2, max * 1.15)
+        .multiplyScalar(fitScale);
       controls.target.set(0, 0, 0);
       controls.update();
     };
@@ -186,6 +189,9 @@ export default function Viewer({
         h = host.clientHeight;
       renderer.setSize(w, h);
       camera.aspect = w / h;
+      const nextFitScale = Math.max(1, 1.25 / camera.aspect);
+      camera.position.multiplyScalar(nextFitScale / fitScale);
+      fitScale = nextFitScale;
       camera.updateProjectionMatrix();
     });
     observer.observe(host);
