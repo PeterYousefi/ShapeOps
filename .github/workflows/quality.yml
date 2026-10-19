@@ -1,7 +1,11 @@
 name: ShapeOps quality
 on:
   push:
+    branches: [main]
   pull_request:
+concurrency:
+  group: shapeops-quality-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
