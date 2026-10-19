@@ -35,8 +35,6 @@ import {
   Search,
   Server,
   ShieldCheck,
-  Sun,
-  Moon,
   Terminal,
   TriangleAlert,
   Workflow,
@@ -47,6 +45,7 @@ import Viewer from "./Viewer";
 import type { Result, Registry, Telemetry, Operations } from "./types";
 import { COLORS } from "./types";
 import "./styles.css";
+import "./lab.css";
 const NAV = [
   { name: "Overview", icon: LayoutDashboard },
   { name: "Inference Studio", icon: Box },
@@ -200,9 +199,7 @@ function App() {
     }),
     [collapsed, setCollapsed] = useState(false),
     [mobile, setMobile] = useState(false),
-    [light, setLight] = useState(
-      () => localStorage.getItem("shapeops-theme") === "light",
-    ),
+    [registrySelection, setRegistrySelection] = useState("surface-rf-v1"),
     [result, setResult] = useState<Result | null>(null),
     [resultFilename, setResultFilename] = useState<string | null>(null),
     [selected, setSelected] = useState<number | null>(null),
@@ -320,9 +317,9 @@ function App() {
     };
   }, [modal]);
   useEffect(() => {
-    document.documentElement.dataset.theme = light ? "light" : "dark";
-    localStorage.setItem("shapeops-theme", light ? "light" : "dark");
-  }, [light]);
+    document.documentElement.dataset.theme = "light";
+    localStorage.setItem("shapeops-theme", "light");
+  }, []);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -418,7 +415,10 @@ function App() {
     <div className="page-heading">
       <div>
         <div className="breadcrumb">
-          WORKSPACE <ChevronRight size={11} /> ENGINEERING PLATFORM
+          SHAPEOPS LAB <ChevronRight size={11} />{" "}
+          {page === "Inference Studio"
+            ? "GEOMETRY / ANALYSIS"
+            : "ENGINEERING WORKSPACE"}
         </div>
         <h1>{page === "Overview" ? "Workspace overview" : page}</h1>
         <p>
@@ -428,7 +428,7 @@ function App() {
                 Overview:
                   "From CAD geometry to operational intelligence. One connected workspace.",
                 "Inference Studio":
-                  "Inspect geometry. Understand predictions. Compare with confidence.",
+                  "A working surface for geometry, predictions and model comparison.",
                 "Model Registry":
                   "Versioned artifacts, reproducible lineage, explicit release gates.",
                 Observability:
@@ -617,7 +617,7 @@ function App() {
           </span>
           <span>
             shape<span className="brand-ops">ops</span>
-            <small>ENGINEERING INTELLIGENCE</small>
+            <small>DIGITAL ENGINEERING LAB</small>
           </span>
         </a>
         <button
@@ -630,11 +630,13 @@ function App() {
           </span>
           <ChevronDown size={14} />
         </button>
-        <div className="nav-label">PLATFORM</div>
+        <div className="nav-label">LAB WORKSPACE</div>
         <nav>
           {NAV.map(({ name, icon: Icon }) => (
             <button
               key={name}
+              aria-label={name}
+              aria-current={page === name ? "page" : undefined}
               title={collapsed ? name : undefined}
               className={"nav-item " + (page === name ? "selected" : "")}
               onClick={() => navigate(name)}
@@ -659,9 +661,15 @@ function App() {
               CPU runtime <span>●</span>
             </span>
           </div>
-          <button className="nav-item" onClick={() => setLight(!light)}>
-            {light ? <Moon size={17} /> : <Sun size={17} />}
-            <span>{light ? "Dark appearance" : "Light appearance"}</span>
+          <button
+            className="nav-item"
+            onClick={() => {
+              setDoc("5-minute walkthrough");
+              navigate("Documentation");
+            }}
+          >
+            <BookOpen size={17} />
+            <span>Lab guide</span>
           </button>
           <button
             className="nav-item collapse-btn"
@@ -728,7 +736,7 @@ function App() {
             </button>
           </div>
         </header>
-        <main>
+        <main className={"page-" + page.toLowerCase().replaceAll(" ", "-")}>
           {heading}
           {apiError && (
             <div className="alert red">
@@ -880,6 +888,30 @@ function App() {
                       </button>
                     </div>
                   </section>
+                  <section className="candidate-strip">
+                    <span className="eyebrow">CANDIDATE / EVALUATION</span>
+                    <h3>
+                      {registry.find((r) => r.stage === "candidate")?.id ||
+                        "Unavailable"}
+                    </h3>
+                    <p>
+                      {registry.find((r) => r.stage === "candidate")
+                        ?.algorithm || "Registry unavailable"}{" "}
+                      · awaiting release gates
+                    </p>
+                    <button
+                      className="text-button"
+                      onClick={() => {
+                        setRegistrySelection(
+                          registry.find((r) => r.stage === "candidate")?.id ||
+                            "surface-et-v2",
+                        );
+                        navigate("Model Registry");
+                      }}
+                    >
+                      Inspect candidate <ArrowRight size={13} />
+                    </button>
+                  </section>
                   <section className="walkthrough-card">
                     <div className="walkthrough-icon">
                       <Command size={18} />
@@ -958,11 +990,42 @@ function App() {
                   ))}
                 </section>
               </div>
+              <section className="panel lab-event-stream">
+                <SectionTitle title="Recent operational events" />
+                {ops?.drills.length ? (
+                  ops.drills.slice(0, 3).map((d) => (
+                    <div className="lab-event" key={d.id}>
+                      <CheckCircle2 size={17} />
+                      <div>
+                        <strong>
+                          Isolated recovery drill{" "}
+                          {d.passed ? "passed" : "failed"}
+                        </strong>
+                        <small>
+                          {d.checks.length} checks · {ms(d.duration_ms)} ·{" "}
+                          {ago(d.at)}
+                        </small>
+                      </div>
+                      <button
+                        className="text-button"
+                        onClick={() => navigate("Operations")}
+                      >
+                        Inspect <ArrowRight size={13} />
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <Empty title="No operational events recorded">
+                    Run an isolated recovery drill in Operations to create a
+                    real event.
+                  </Empty>
+                )}
+              </section>
               <section className="panel recent-panel">
                 <div className="panel-header">
                   <div className="panel-title">
                     <Terminal size={16} />
-                    <h2>Recent inference requests</h2>
+                    <h2>Recent CAD analyses</h2>
                     <span className="count">{telemetry.total}</span>
                   </div>
                   <button
@@ -1062,6 +1125,10 @@ function App() {
                   <progress value={uploadProgress} max={100} />
                 </div>
               )}
+              <div className="lab-section-label">
+                <span>01 / GEOMETRY WORKSPACE</span>
+                <span>FACE-LEVEL SURFACE ANALYSIS</span>
+              </div>
               <div className="studio-layout">
                 <section className="panel studio-canvas-panel">
                   <div className="studio-canvas-header">
@@ -1269,6 +1336,10 @@ function App() {
                   </div>
                 </aside>
               </div>
+              <div className="lab-section-label">
+                <span>02 / FACE EXPLORER</span>
+                <span>LINKED TO VIEWPORT SELECTION</span>
+              </div>
               <section className="panel faces-panel">
                 <div className="panel-header">
                   <div className="panel-title">
@@ -1352,7 +1423,7 @@ function App() {
               <div className="info-banner">
                 <GitBranch size={18} />
                 <div>
-                  <strong>Every model has a paper trail.</strong>
+                  <strong>Inspect the artifact. Follow its lineage.</strong>
                   <span>
                     Immutable trained-tree checksums, dataset hashes, held-out
                     evaluation, and source provenance.
@@ -1360,75 +1431,109 @@ function App() {
                 </div>
                 <Badge tone="blue">Local registry</Badge>
               </div>
-              <div className="registry-grid">
-                {registry.map((r) => (
-                  <section key={r.id} className="panel model-card">
-                    <div className="model-card-top">
-                      <div className="model-symbol">
-                        <Boxes size={27} />
-                      </div>
-                      <Badge tone={r.stage === "stable" ? "green" : "purple"}>
-                        {r.stage === "stable" ? "Stable baseline" : "Candidate"}
-                      </Badge>
-                    </div>
-                    <div className="eyebrow">
-                      ANALYTIC SURFACE CLASSIFICATION
-                    </div>
-                    <h2>{r.id}</h2>
-                    <p>
-                      {r.algorithm} · {r.framework}
-                    </p>
-                    <div className="model-metrics">
-                      <div>
-                        <strong>{pct(r.macro_f1)}</strong>
-                        <span>Held-out macro F1</span>
-                      </div>
-                      <div>
-                        <strong>{r.evaluation_rows}</strong>
-                        <span>Evaluation faces</span>
-                      </div>
-                      <div>
-                        <strong>{r.training_rows}</strong>
-                        <span>Training faces</span>
-                      </div>
-                    </div>
-                    <div className="data-note">
-                      <Info size={14} />
-                      {r.limitations}
-                    </div>
-                    <dl>
-                      <div>
-                        <dt>Artifact SHA-256</dt>
-                        <dd className="mono">{r.checksum.slice(0, 16)}…</dd>
-                      </div>
-                      <div>
-                        <dt>Runtime</dt>
-                        <dd>{r.runtime}</dd>
-                      </div>
-                      <div>
-                        <dt>Training seed</dt>
-                        <dd>42 · deterministic</dd>
-                      </div>
-                    </dl>
-                    <div className="model-card-actions">
-                      <button
-                        className="button secondary"
-                        onClick={() => setModal(`model:${r.id}`)}
-                      >
-                        <FileBox size={14} /> Model card
-                      </button>
-                      <button
-                        className="text-button"
-                        onClick={() => {
-                          setModel(r.id);
-                          navigate("Inference Studio");
-                        }}
-                      >
-                        Use in studio <ArrowRight size={14} />
-                      </button>
-                    </div>
-                  </section>
+              <div className="lab-section-label">
+                <span>01 / RELEASE EXPLORER</span>
+                <span>REGISTERED ARTIFACTS · NOT A DEPLOYMENT HISTORY</span>
+              </div>
+              <div
+                className="release-selector"
+                aria-label="Registered model versions"
+              >
+                {registry.map((r, index) => (
+                  <button
+                    key={r.id}
+                    aria-pressed={registrySelection === r.id}
+                    onClick={() => setRegistrySelection(r.id)}
+                  >
+                    <span className="release-index">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <span>
+                      <strong>{r.id}</strong>
+                      <small>
+                        {r.algorithm} · {r.stage}
+                      </small>
+                    </span>
+                    <GitBranch size={18} />
+                  </button>
                 ))}
+              </div>
+              <div className="registry-grid">
+                {registry
+                  .filter((r) => r.id === registrySelection)
+                  .map((r) => (
+                    <section
+                      key={r.id}
+                      className="panel model-card release-selected"
+                    >
+                      <div className="model-card-top">
+                        <div className="model-symbol">
+                          <Boxes size={27} />
+                        </div>
+                        <Badge tone={r.stage === "stable" ? "green" : "purple"}>
+                          {r.stage === "stable"
+                            ? "Stable baseline"
+                            : "Candidate"}
+                        </Badge>
+                      </div>
+                      <div className="eyebrow">
+                        ANALYTIC SURFACE CLASSIFICATION
+                      </div>
+                      <h2>{r.id}</h2>
+                      <p>
+                        {r.algorithm} · {r.framework}
+                      </p>
+                      <div className="model-metrics">
+                        <div>
+                          <strong>{pct(r.macro_f1)}</strong>
+                          <span>Held-out macro F1</span>
+                        </div>
+                        <div>
+                          <strong>{r.evaluation_rows}</strong>
+                          <span>Evaluation faces</span>
+                        </div>
+                        <div>
+                          <strong>{r.training_rows}</strong>
+                          <span>Training faces</span>
+                        </div>
+                      </div>
+                      <div className="data-note">
+                        <Info size={14} />
+                        {r.limitations}
+                      </div>
+                      <dl>
+                        <div>
+                          <dt>Artifact SHA-256</dt>
+                          <dd className="mono">{r.checksum.slice(0, 16)}…</dd>
+                        </div>
+                        <div>
+                          <dt>Runtime</dt>
+                          <dd>{r.runtime}</dd>
+                        </div>
+                        <div>
+                          <dt>Training seed</dt>
+                          <dd>42 · deterministic</dd>
+                        </div>
+                      </dl>
+                      <div className="model-card-actions">
+                        <button
+                          className="button secondary"
+                          onClick={() => setModal(`model:${r.id}`)}
+                        >
+                          <FileBox size={14} /> Model card
+                        </button>
+                        <button
+                          className="text-button"
+                          onClick={() => {
+                            setModel(r.id);
+                            navigate("Inference Studio");
+                          }}
+                        >
+                          Use in studio <ArrowRight size={14} />
+                        </button>
+                      </div>
+                    </section>
+                  ))}
               </div>
               <section className="panel">
                 <div className="panel-header">
@@ -1493,6 +1598,14 @@ function App() {
                     </tbody>
                   </table>
                 </div>
+              </section>
+              <section className="panel promotion-history">
+                <SectionTitle title="Promotion history" />
+                <Empty title="No production promotions recorded">
+                  Stable and candidate are local registry designations.
+                  Production release events appear only after an authorized
+                  deployment.
+                </Empty>
               </section>
               <section className="panel lineage-panel">
                 <SectionTitle title="Reproducible lineage" />
@@ -1571,6 +1684,9 @@ function App() {
                   color="amber"
                 />
               </div>
+              <h2 className="lab-group-title">
+                01 / SERVICE HEALTH & MODEL BEHAVIOR
+              </h2>
               <div className="observability-grid">
                 <section className="panel">
                   <div className="panel-header">
@@ -1632,7 +1748,7 @@ function App() {
                   <div className="panel-header">
                     <div className="panel-title">
                       <FileBox size={16} />
-                      <h2>Data · geometry & distribution</h2>
+                      <h2>Data distribution & drift screening</h2>
                     </div>
                   </div>
                   <div className="data-quality">
@@ -1764,12 +1880,16 @@ function App() {
                 </div>
                 <Badge tone="amber">Local only</Badge>
               </div>
+              <div className="lab-section-label">
+                <span>01 / VALIDATE → AUTHORIZE → RELEASE</span>
+                <span>LOCAL CONTROL PLANE</span>
+              </div>
               <div className="ops-grid">
                 <section className="panel release-panel">
                   <div className="panel-header">
                     <div className="panel-title">
                       <GitBranch size={16} />
-                      <h2>Release readiness</h2>
+                      <h2>Rollout checkpoints</h2>
                     </div>
                     <Badge tone="amber">Not deployed</Badge>
                   </div>
