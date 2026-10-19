@@ -2,6 +2,7 @@ import asyncio, json, logging, os, sqlite3, subprocess, sys, tempfile, time, uui
 from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 from pathlib import Path
+import stat
 import numpy as np
 import cadquery as cq
 from fastapi import FastAPI, File, UploadFile, HTTPException, Request
@@ -11,6 +12,7 @@ from pydantic import BaseModel
 from backend.cad import SAMPLES, sample_shape, describe
 from backend.training import train, ROOT
 from backend.security import BodyLimitMiddleware
+from backend.worker_limits import MAX_RESULT_BYTES
 
 logger = logging.getLogger("shapeops")
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -151,7 +153,8 @@ def infer(geometry, model, compare, trace, name, source, started, parse_ms):
     alternate_probabilities = alternate_estimator.predict_proba(x) if compare else None
     other = (
         alternate_estimator.classes_[alternate_probabilities.argmax(axis=1)]
-        if compare else None
+        if compare
+        else None
     )
     for i, f in enumerate(geometry["faces"]):
         f["prediction"] = str(pred[i])
@@ -281,23 +284,39 @@ def process_step(data):
     with tempfile.TemporaryDirectory(prefix="shapeops-") as d:
         path = Path(d) / "input.step"
         path.write_bytes(data)
+        output = Path(d) / "result.json"
+        environment = dict(os.environ)
+        environment.update(
+            {
+                "OPENBLAS_NUM_THREADS": "1",
+                "OMP_NUM_THREADS": "1",
+                "MKL_NUM_THREADS": "1",
+            }
+        )
         result = subprocess.run(
-            [sys.executable, "-m", "backend.worker", str(path)],
+            [sys.executable, "-m", "backend.worker", str(path), str(output)],
             cwd=ROOT,
-            capture_output=True,
-            text=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env=environment,
             timeout=30,
         )
-        lines = [
-            s for s in result.stdout.splitlines() if s.startswith("SHAPEOPS_RESULT:")
-        ]
-        if not lines:
-            raise ValueError(
-                "CAD processing failed. Check that the file contains a closed solid."
-            )
-        parsed = json.loads(lines[-1].split(":", 1)[1])
-        if "error" in parsed:
-            raise ValueError(parsed["error"])
+        failure = "CAD processing failed within supported geometry and resource limits."
+        if result.returncode != 0:
+            raise ValueError(failure)
+        try:
+            descriptor = os.open(output, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW)
+            with os.fdopen(descriptor, "rb") as stream:
+                if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+                    raise ValueError(failure)
+                encoded = stream.read(MAX_RESULT_BYTES + 1)
+            if len(encoded) > MAX_RESULT_BYTES:
+                raise ValueError(failure)
+            parsed = json.loads(encoded)
+        except (OSError, UnicodeError, json.JSONDecodeError):
+            raise ValueError(failure) from None
+        if not isinstance(parsed, dict) or "error" in parsed:
+            raise ValueError(failure)
         return parsed
 
 

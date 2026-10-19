@@ -42,7 +42,7 @@ See open-issues.md, roadmap.md and requirements-matrix.md. Highest priorities: s
 
 ## Approval boundary
 
-Explicit owner authorization is still required for Azure resources/deployment, domain purchase, recurring charges, production promotion/destructive remote operations and repository visibility changes. No such approval has been given. Do not ask to approve a vague future action; complete the concrete reviewable readiness work first.
+The owner explicitly authorized public repository visibility and hourly engineering/test/push/CI-gated-merge continuation until main exceeds 80 meaningful commits. Azure resources/deployment, domain purchase, recurring cloud charges and production promotion/destructive remote operations still require separate approval. Do not ask to approve a vague future action; complete the concrete reviewable readiness work first.
 
 ## Latest direction: Digital Engineering Lab
 
@@ -65,3 +65,11 @@ Final screenshot-driven correction: the legacy mobile block-heading rule is over
 Owner explicitly authorized public visibility and branch protection, then separately approved hourly background engineering runs that implement/test/push and merge only CI-passing PRs until main exceeds 80 meaningful commits. The former milestone-only notification was replaced with that approved continuation; routine notifications are disabled. It must never deploy to Azure, fabricate history or bypass protection.
 
 GitHub visibility is PUBLIC. Main requires PRs, resolved conversations and up-to-date application/container/kubernetes/terraform checks. Force pushes/deletion are prohibited and admins are included. Independent approvals are not mandatory in this solo-maintainer setup. PR #4 merged as daed6a7 after all four checks passed in run 39317110196. Remote main has 30 reachable commits at that checkpoint; the >80 target is not yet achieved. New governance verification work is on chore/repository-governance; inspect its PR/checks before starting competing work. Run python3 scripts/repository_governance.py for a read-only audit. Thirteen new policy tests pass locally. See docs/repository-governance.md and artifacts/repository-governance.json.
+
+## CAD worker hardening — current background increment
+
+PR #5 passed all four required checks at 64709f3 in run 39318471748 and merged as cff9de9. Main has 32 reachable commits at that checkpoint. Live read-only governance audit still passes and visibility remains public. Current work is on feat/bounded-cad-worker; inspect its PR before starting competing work.
+
+Native CAD parsing now applies CPU/file/core budgets before CAD imports, plus Linux mapped-address-space/data ceilings. Native output is discarded; finite result JSON is atomically written and bounded to 24 MiB, and the parent performs a capped read. Existing face IDs, temporary cleanup, geometry/inference APIs and the light UI are preserved. Local backend validation: 42 passed, 1 Linux-only memory probe skipped on macOS (40.47s). Ruff, MyPy and frontend build pass. Browser checks and hosted Linux verification are recorded in the final evidence for this increment. Full filesystem/network isolation, bounded admission queues and aggregate worker limits remain open; this is not a complete public-service sandbox.
+
+Final local browser validation passed all 10 checks (44.1s) on the final API. Result reads are regular-file-only and nonblocking; symlink/FIFO and cleanup failures are tested. Native worker resource probes and all five STEP round-trips pass on macOS except the explicitly skipped Linux memory probe. Kind smoke now tests real native-worker STEP upload before and after restart. Do not merge until hosted Linux application/container/kubernetes/terraform checks pass on the exact head. No source UI styling changed; regenerated unrelated baseline screenshots were not included in this security increment. Local API pid 79644 serves current code at 8000; Vite remains at 5173.

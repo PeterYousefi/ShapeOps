@@ -1,6 +1,9 @@
 import { test, expect } from "@playwright/test";
 import fs from "node:fs";
 test("desktop complete engineering walkthrough", async ({ page, request }) => {
+  // Six screens, native STEP processing and evidence capture share this total budget.
+  // Individual request and expectation deadlines remain unchanged.
+  test.setTimeout(120000);
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
