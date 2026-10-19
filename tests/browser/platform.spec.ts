@@ -6,6 +6,7 @@ test("desktop complete engineering walkthrough", async ({ page, request }) => {
   await page.goto("/");
   await expect(page.getByText("Local runtime online")).toBeVisible();
   await expect(page.getByText("19 faces · mm")).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
     path: "artifacts/overview-desktop.png",
     fullPage: true,
@@ -31,8 +32,9 @@ test("desktop complete engineering walkthrough", async ({ page, request }) => {
     page.getByRole("button", { name: "Run inference", exact: true }),
   ).toBeEnabled();
   await expect(
-    page.getByRole("term").filter({ hasText: "Disagreements" }),
+    page.getByRole("group", { name: "Prediction layer" }),
   ).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
     path: "artifacts/studio-desktop.png",
     fullPage: true,
@@ -80,6 +82,7 @@ test("desktop complete engineering walkthrough", async ({ page, request }) => {
     .click();
   await expect(page.getByRole("dialog")).toContainText("Artifact SHA-256");
   await page.getByRole("button", { name: "Close dialog" }).click();
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
     path: "artifacts/registry-desktop.png",
     fullPage: true,
@@ -90,6 +93,7 @@ test("desktop complete engineering walkthrough", async ({ page, request }) => {
   await expect(
     page.getByRole("heading", { name: "Request explorer" }),
   ).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
     path: "artifacts/observability-desktop.png",
     fullPage: true,
@@ -101,6 +105,7 @@ test("desktop complete engineering walkthrough", async ({ page, request }) => {
   await expect(
     page.getByText("Stable adapter recovery inference").first(),
   ).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
     path: "artifacts/operations-desktop.png",
     fullPage: true,
@@ -114,17 +119,20 @@ test("desktop complete engineering walkthrough", async ({ page, request }) => {
   await expect(
     page.getByText("Five minutes from geometry to operational confidence."),
   ).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
     path: "artifacts/documentation-desktop.png",
     fullPage: true,
   });
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await page.getByRole("button", { name: "Overview", exact: true }).click();
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
     path: "artifacts/light-desktop.png",
     fullPage: true,
   });
   await page.getByRole("button", { name: "Open studio", exact: false }).click();
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
     path: "artifacts/studio-light-desktop.png",
     fullPage: true,
@@ -141,6 +149,7 @@ test("mobile all screens, navigation, viewport and upload controls", async ({
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await expect(page.getByText("19 faces · mm")).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
     path: "artifacts/overview-mobile.png",
     fullPage: true,
@@ -172,11 +181,13 @@ test("mobile all screens, navigation, viewport and upload controls", async ({
     if (name === "Inference Studio") {
       await page.getByRole("button", { name: "Face 002", exact: true }).click();
       await expect(page.getByText("face:1", { exact: true })).toBeVisible();
+      await page.evaluate(() => window.scrollTo(0, 0));
       await page.screenshot({
         path: "artifacts/studio-mobile.png",
         fullPage: true,
       });
     }
+    await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({
       path: `artifacts/${name.toLowerCase().replaceAll(" ", "-")}-mobile.png`,
       fullPage: true,
