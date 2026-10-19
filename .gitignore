@@ -15,3 +15,6 @@ playwright-report/
 *.tsbuildinfo
 artifacts/test-upload.step
 artifacts/overview-initial.png
+
+.mypy_cache/
+.ruff_cache/

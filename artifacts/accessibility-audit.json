@@ -1,0 +1,62 @@
+[
+  {
+    "theme": "dark",
+    "screen": "Overview",
+    "violations": []
+  },
+  {
+    "theme": "dark",
+    "screen": "Inference Studio",
+    "violations": []
+  },
+  {
+    "theme": "dark",
+    "screen": "Model Registry",
+    "violations": []
+  },
+  {
+    "theme": "dark",
+    "screen": "Observability",
+    "violations": []
+  },
+  {
+    "theme": "dark",
+    "screen": "Operations",
+    "violations": []
+  },
+  {
+    "theme": "dark",
+    "screen": "Documentation",
+    "violations": []
+  },
+  {
+    "theme": "light",
+    "screen": "Overview",
+    "violations": []
+  },
+  {
+    "theme": "light",
+    "screen": "Inference Studio",
+    "violations": []
+  },
+  {
+    "theme": "light",
+    "screen": "Model Registry",
+    "violations": []
+  },
+  {
+    "theme": "light",
+    "screen": "Observability",
+    "violations": []
+  },
+  {
+    "theme": "light",
+    "screen": "Operations",
+    "violations": []
+  },
+  {
+    "theme": "light",
+    "screen": "Documentation",
+    "violations": []
+  }
+]

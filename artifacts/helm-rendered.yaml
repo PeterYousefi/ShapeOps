@@ -1,0 +1,66 @@
+---
+# Source: shapeops/templates/deployment.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: shapeops
+spec:
+  selector:
+    app: shapeops
+  ports:
+    - { port: 8000, targetPort: 8000 }
+---
+# Source: shapeops/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shapeops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shapeops
+  template:
+    metadata:
+      labels:
+        app: shapeops
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
+      containers:
+        - name: shapeops
+          image: "shapeops:local"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          resources:
+            limits:
+              cpu: "2"
+              memory: 3Gi
+            requests:
+              cpu: "1"
+              memory: 2Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          startupProbe:
+            httpGet: { path: /api/health, port: 8000 }
+            failureThreshold: 30
+            periodSeconds: 5
+          readinessProbe:
+            httpGet: { path: /api/health, port: 8000 }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /api/health, port: 8000 }
+            periodSeconds: 30
+          volumeMounts:
+            - { name: runtime, mountPath: /app/.runtime }
+            - { name: temporary, mountPath: /tmp }
+      volumes:
+        - name: runtime
+          emptyDir: { sizeLimit: 1Gi }
+        - name: temporary
+          emptyDir: { sizeLimit: 512Mi }
