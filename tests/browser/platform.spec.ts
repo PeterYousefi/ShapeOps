@@ -65,6 +65,15 @@ test("desktop complete engineering walkthrough", async ({ page, request }) => {
   await page
     .getByRole("button", { name: "Model Registry", exact: true })
     .click();
+  const releases = page.getByRole("button", {
+    name: /surface-et-v2.*ExtraTreesClassifier/,
+  });
+  await releases.click();
+  await expect(releases).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".model-card h2")).toHaveText("surface-et-v2");
+  await expect(
+    page.getByText("No production promotions recorded", { exact: true }),
+  ).toBeVisible();
   await page
     .getByRole("button", { name: "Model card", exact: true })
     .first()
@@ -109,9 +118,6 @@ test("desktop complete engineering walkthrough", async ({ page, request }) => {
     path: "artifacts/documentation-desktop.png",
     fullPage: true,
   });
-  await page
-    .getByRole("button", { name: "Light appearance", exact: true })
-    .click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await page.getByRole("button", { name: "Overview", exact: true }).click();
   await page.screenshot({
@@ -152,7 +158,7 @@ test("mobile all screens, navigation, viewport and upload controls", async ({
     await page
       .locator("nav")
       .getByRole("button", {
-        name: name === "Inference Studio" ? "Inference Studio 3D" : name,
+        name,
         exact: true,
       })
       .click();
@@ -176,4 +182,35 @@ test("mobile all screens, navigation, viewport and upload controls", async ({
       fullPage: true,
     });
   }
+});
+
+test("light lab layout persists over an old dark preference and supports a compact rail", async ({
+  page,
+}) => {
+  await page.addInitScript(() =>
+    localStorage.setItem("shapeops-theme", "dark"),
+  );
+  await page.goto("/#Inference%20Studio");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await expect(page.getByText("19 faces · mm")).toBeVisible();
+  const canvas = await page
+    .locator(".studio-canvas-panel canvas")
+    .boundingBox();
+  expect(canvas!.width).toBeGreaterThan(650);
+  expect(canvas!.height).toBeGreaterThanOrEqual(490);
+  await page
+    .getByRole("button", { name: "Collapse sidebar", exact: true })
+    .click();
+  await expect(page.locator(".app")).toHaveClass(/sidebar-collapsed/);
+  await page
+    .getByRole("button", { name: "Model Registry", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Model Registry", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: /surface-et-v2.*ExtraTreesClassifier/ })
+    .focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".model-card h2")).toHaveText("surface-et-v2");
 });
