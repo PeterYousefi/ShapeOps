@@ -16,13 +16,13 @@ Frontend http://127.0.0.1:5173; API http://127.0.0.1:8000. Native CAD initializa
 
 ## Verified test state
 
-17 backend tests pass. Three browser tests cover complete desktop flow, mobile all-screen flow/no full-page overflow, and zero axe WCAG A/AA violations across six screens × two themes. Screenshots captured/visually inspected. Final upload-identity regression received an additional passing desktop/mobile run. TypeScript production build, Ruff F checks, baseline MyPy, dependency audits, Helm lint/render and Terraform provider-schema validation pass. See artifacts and acceptance-tests.md for limits and exact records. No Azure plan/apply occurred.
+17 backend tests pass. Four browser tests now cover the light Digital Engineering Lab: complete desktop flow, mobile all-screen/no full-page overflow, zero axe WCAG A/AA violations across all six screens, and light-first/keyboard/release/tablet regression. Screenshots captured/visually inspected. Final upload-identity regression received an additional passing desktop/mobile run. TypeScript production build, Ruff F checks, baseline MyPy, dependency audits, Helm lint/render and Terraform provider-schema validation pass. See artifacts and acceptance-tests.md for limits and exact records. No Azure plan/apply occurred.
 
 Prior 15-test local process: 46.95s wall, maximum resident set ~648 MB, peak memory footprint ~439 MB (macOS time output). This is a test process measurement, not container memory sizing. Ten-request cached-sample benchmark median client latency ~20.9ms, max ~32.5ms; not parsing/cold-start/cloud latency.
 
 ## Git/GitHub
 
-Private remote: https://github.com/PeterYousefi/ShapeOps . Authenticated account PeterYousefi; configured author Pouya / yousefipouya@gmail.com was preserved, not changed. Initial five milestones on main; active branch `main` after the verified PR merge. Last verified merged implementation is `8fb1f38` (PR #1 merge), with all source checks passing at `f3207c8`. The final evidence-only documentation commit follows this checkpoint. Inspect `git log`, `git status`, `git branch -vv` and actual GitHub runs for the latest state. Never count draft PRs as merged. No achievements are claimed.
+Private remote: https://github.com/PeterYousefi/ShapeOps . Authenticated account PeterYousefi; configured author Pouya / yousefipouya@gmail.com was preserved, not changed. Initial five milestones on main; active redesign branch `feat/digital-engineering-lab` (PR #4). Last verified merged implementation is `8fb1f38` (PR #1 merge), with all source checks passing at `f3207c8`. The final evidence-only documentation commit follows this checkpoint. Inspect `git log`, `git status`, `git branch -vv` and actual GitHub runs for the latest state. Never count draft PRs as merged. No achievements are claimed.
 
 PR #1 is merged and attached to this chat: https://github.com/PeterYousefi/ShapeOps/pull/1 . Do not create duplicates. There are two substantive open issues (#2 public-input/worker hardening and #3 persistent governance/cloud adapters), one confirmed merged PR as of this checkpoint, and no claimed achievements.
 
@@ -43,3 +43,11 @@ See open-issues.md, roadmap.md and requirements-matrix.md. Highest priorities: s
 ## Approval boundary
 
 Explicit owner authorization is still required for Azure resources/deployment, domain purchase, recurring charges, production promotion/destructive remote operations and repository visibility changes. No such approval has been given. Do not ask to approve a vague future action; complete the concrete reviewable readiness work first.
+
+## Latest direction: Digital Engineering Lab
+
+Active redesign branch: `feat/digital-engineering-lab`, PR #4 (attached to chat). User explicitly rejected the old dark UI. Light-first design in `src/lab.css` and docs/design-system.md supersedes older theme descriptions. The shell, all six pages and Three.js scene have been redesigned; genuine API operations remain intact. Registry selection is local UI state backed by real registry records; no historical production promotion data was invented. Navigation now has explicit accessible names/current-page state. Viewport overlays no longer intercept camera-control clicks.
+
+The full-project target is **well over 80 meaningful commits**, still outstanding. Keep normal cohesive engineering history and continue the production roadmap; do not claim this UI milestone fulfills that target. No Azure deployment is authorized by this request.
+
+Final local redesign validation: 17 backend tests passed (48.12s); TypeScript/Vite build passed; all 4 Chromium tests passed (27.5s), including tablet navigation, compact rail and keyboard release selection. Six-screen axe audit found zero targeted WCAG violations. Final desktop/mobile screenshots were inspected, including portrait camera fit and registry/observability hierarchy. See artifacts/redesign-validation.json. Hosted PR checks must be checked separately at the current head.

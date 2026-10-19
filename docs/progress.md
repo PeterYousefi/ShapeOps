@@ -13,3 +13,11 @@ No Azure resources, domain registrations or paid cloud services were created. Lo
 Hosted CI evidence: run 39308066260 passed application, Terraform and actual Kind deployment/inference/restart recovery. It blocked the original Debian runtime on three critical library findings. The original report is preserved, and source commit 993930d upgrades the runtime to Ubuntu 26.04 after primary vendor-advisory review. The critical gate remains unchanged; remediation must be verified in the next scan. Draft PR #1 and issues #2–#3 exist; no PR has been merged at this checkpoint.
 
 Final verified source milestone: [run 39309545540](https://github.com/PeterYousefi/ShapeOps/actions/runs/39309545540) passed application, container security, Kubernetes and Terraform. Actual Ubuntu 26.04 image scan found zero critical vulnerabilities at scan time. Real Kind native CAD startup, inference and restart recovery passed. PR #1 merged as 8fb1f38; one merged PR confirmed. The complete production/lifecycle contract remains partial and no achievements are claimed. No Azure resources were created.
+
+## Digital Engineering Lab redesign
+
+The user rejected the original dark dashboard and explicitly selected a light, calm CAD/research-lab direction. The frontend now uses that palette, a compact lab shell, a larger light-grid CAD viewport, linked face inspection, a selectable real-artifact release explorer, candidate/event workspace sections, distinct monitoring zones, operational event timelines and readable documentation. Actual inference/upload/comparison/drift APIs are preserved. No Azure deployment occurred.
+
+The user reiterated **well over 80 meaningful commits** for the full project. This target is outstanding. The redesign is a cohesive UI milestone, not completion of the entire production contract. Do not manufacture history to reach the target.
+
+Final local redesign verification: 17 backend tests; 4 Chromium tests (27.5s); zero axe violations across six light screens; TypeScript/Vite build and formatting checks pass. Real screenshots inspected and corrected at desktop/mobile sizes, with extra tablet checks. PR #4 contains the redesign. Hosted checks are independent and are not assumed to pass from local results.
