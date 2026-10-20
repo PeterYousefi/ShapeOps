@@ -9,7 +9,7 @@ This is a working local application milestone. The complete autonomous engineeri
 | 3 Inference | Trained analytic baselines and face-aware runtime | Industrial data/generalization and calibration |
 | 4 Frontend | Six screens, upload workflow, interactive viewer, responsive themes | Additional device/assistive-technology checks |
 | 5 Comparison | Distinct model versions, probabilities, disagreements and coloring | Broader regression corpus |
-| 6 Registry/governance | Atomic immutable local artifact packages, provenance, cards, pure gate evaluation | Long-lived immutable registry/run records, approvals and release lineage |
+| 6 Registry/governance | Atomic immutable local packages, append-only completed training journal, provenance, cards, pure gate evaluation | Archival/cloud durability, failed-attempt history, approvals and release lineage |
 | 7 Training/evaluation | Reproducible procedural pipeline, holdout report, regression checks | External dataset contracts, bounded candidate task and publication workflow |
 | 8 Monitoring/drift | Actual request metrics and OOD screening, bounded local request/drill retention, local dashboard config | Durable cloud telemetry, validated drift history/reports, alert routing |
 | 9 Operations | Isolated injected adapter failure and recovery checks | Authorized release state and tested revision rollback |
