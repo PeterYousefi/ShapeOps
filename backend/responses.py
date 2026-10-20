@@ -1,7 +1,7 @@
 """Public engineering API contracts; preserve real geometry and operational state."""
 import math
 from typing import Annotated, Literal, Self
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 from backend.contracts import Surface
 
 Nonnegative = Annotated[float, Field(ge=0)]
@@ -151,3 +151,93 @@ class OperationsResponse(OutputModel):
     release_history: Annotated[list[dict], Field(max_length=0)]
     drills: Annotated[list[DrillResult], Field(max_length=20)]
     promotion: str
+
+
+Digest = Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]
+RunIdentity = Annotated[str, Field(pattern=r"^[a-f0-9]{32}$")]
+
+
+class ReleaseGates(OutputModel):
+    quality: bool
+    compatibility: bool
+    license: bool
+    security: bool
+
+
+class ModelManifest(OutputModel):
+    id: Annotated[str, Field(min_length=1)]
+    stage: Literal["stable", "candidate"]
+    framework: str
+    runtime: str
+    algorithm: str
+    parameters: dict[str, JsonValue]
+    checksum: Digest
+    package_checksum: Digest
+    heldout_log_loss: Nonnegative
+    dataset_hash: Digest
+    license: str
+    training_rows: Annotated[int, Field(ge=1)]
+    evaluation_rows: Annotated[int, Field(ge=1)]
+    accuracy: Probability
+    macro_f1: Probability
+    git_commit: str
+    source_hash: Digest
+    git_dirty: bool
+    environment_hash: Digest
+    classes: Annotated[list[Surface], Field(min_length=1)]
+    features: Annotated[list[str], Field(min_length=1)]
+    limitations: str
+    gates: ReleaseGates
+    package_id: Digest
+
+    @model_validator(mode="after")
+    def unique_labels(self) -> Self:
+        if len(set(self.classes)) != len(self.classes) or len(set(self.features)) != len(self.features):
+            raise ValueError("Model class and feature labels must be unique")
+        return self
+
+
+class RegisteredModel(ModelManifest):
+    run_id: RunIdentity
+
+
+class RunModelReference(OutputModel):
+    model_id: Annotated[str, Field(min_length=1)]
+    package_id: Digest
+
+
+class TrainingRunSummary(OutputModel):
+    id: RunIdentity
+    started_at: Nonnegative
+    completed_at: Nonnegative
+    models: Annotated[list[RunModelReference], Field(min_length=1, max_length=16)]
+
+    @model_validator(mode="after")
+    def consistent_run(self) -> Self:
+        if self.completed_at < self.started_at or len({m.model_id for m in self.models}) != len(self.models):
+            raise ValueError("Invalid training timestamps or duplicate model references")
+        return self
+
+
+class TrainingHistory(OutputModel):
+    origin: Literal["Actual completed local baseline training runs"]
+    runs: Annotated[list[TrainingRunSummary], Field(max_length=100)]
+
+    @model_validator(mode="after")
+    def unique_runs(self) -> Self:
+        if len({run.id for run in self.runs}) != len(self.runs):
+            raise ValueError("Duplicate training runs")
+        return self
+
+
+class TrainingRunDetail(OutputModel):
+    id: RunIdentity
+    started_at: Nonnegative
+    completed_at: Nonnegative
+    models: Annotated[list[ModelManifest], Field(min_length=1, max_length=16)]
+
+    @model_validator(mode="after")
+    def consistent_run(self) -> Self:
+        if self.completed_at < self.started_at or len({m.id for m in self.models}) != len(self.models):
+            raise ValueError("Invalid training timestamps or duplicate model manifests")
+        return self
