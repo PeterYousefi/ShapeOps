@@ -240,3 +240,22 @@ def test_idle_api_reads_expire_persistent_records(client, tmp_path, monkeypatch)
     with module.connection() as db:
         assert db.execute("SELECT COUNT(*) FROM requests").fetchone()[0] == 0
         assert db.execute("SELECT id FROM drills").fetchall()[0][0] == "recent"
+
+
+def test_registry_packages_match_real_runtime_models(client):
+    import hashlib
+    import json
+    import joblib
+    import numpy as np
+    root = Path(os.environ["SHAPEOPS_DATA_DIR"]) / "models" / "packages-v2"
+    for record in client.get("/api/registry").json():
+        directory = root / record["package_id"]
+        manifest_bytes = (directory / "manifest.json").read_bytes()
+        assert hashlib.sha256(manifest_bytes).hexdigest() == record["package_id"]
+        assert json.loads(manifest_bytes) == {key: value for key, value in record.items() if key != "package_id"}
+        assert hashlib.sha256((directory / "trees.json").read_bytes()).hexdigest() == record["checksum"]
+        assert hashlib.sha256((directory / "estimator.joblib").read_bytes()).hexdigest() == record["package_checksum"]
+        # Only our internally trained fixture artifact is deserialized here.
+        estimator = joblib.load(directory / "estimator.joblib")
+        x = np.array([face["features"] for face in app.state.samples["bracket"]["faces"]])
+        assert np.array_equal(estimator.predict_proba(x), app.state.models[record["id"]].predict_proba(x))
