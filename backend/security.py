@@ -13,7 +13,10 @@ MAX_BODY_BYTES = 10 * 1024 * 1024 + 64 * 1024  # bounded multipart envelope
 
 
 class BodyLimitMiddleware:
-    def __init__(self, app, on_reject=None):
+    def __init__(self, app, on_reject=None, body_timeout: float = 30):
+        if not math.isfinite(body_timeout) or body_timeout <= 0:
+            raise ValueError("Upload body deadline must be positive and finite")
+        self.body_timeout = body_timeout
         self.app = app
         self.on_reject = on_reject
 
@@ -44,10 +47,20 @@ class BodyLimitMiddleware:
             )(scope, receive, send)
             return
         received = 0
+        deadline = time.monotonic() + self.body_timeout
 
         async def bounded_receive():
             nonlocal received
-            message = await receive()
+            try:
+                # One absolute body budget; small chunks cannot reset the clock.
+                if time.monotonic() >= deadline:
+                    raise TimeoutError
+                async with asyncio.timeout_at(deadline):
+                    message = await receive()
+            except TimeoutError:
+                reject()
+                # The pinned multipart parser closes spools on stream exceptions.
+                raise HTTPException(408, "Upload body deadline exceeded. Retry the upload.") from None
             if message["type"] == "http.request":
                 received += len(message.get("body", b""))
                 if received > MAX_BODY_BYTES:
