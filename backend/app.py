@@ -14,6 +14,7 @@ from backend.training import train, ROOT
 from backend.security import AdmissionMiddleware, BodyLimitMiddleware, run_worker
 from backend.worker_limits import MAX_RESULT_BYTES
 from backend.retention import initialize_retention, prune_records
+from backend.contracts import Geometry, validate_geometry
 
 logger = logging.getLogger("shapeops")
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -283,7 +284,7 @@ async def sample_inference(payload: InferenceInput, request: Request):
         )
 
 
-def process_step(data):
+def process_step(data: bytes) -> Geometry:
     with tempfile.TemporaryDirectory(prefix="shapeops-") as d:
         path = Path(d) / "input.step"
         path.write_bytes(data)
@@ -318,9 +319,10 @@ def process_step(data):
             parsed = json.loads(encoded)
         except (OSError, UnicodeError, json.JSONDecodeError):
             raise ValueError(failure) from None
-        if not isinstance(parsed, dict) or "error" in parsed:
-            raise ValueError(failure)
-        return parsed
+        try:
+            return validate_geometry(parsed)
+        except ValueError:
+            raise ValueError(failure) from None
 
 
 @app.post("/api/inference/upload")
