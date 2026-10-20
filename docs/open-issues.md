@@ -9,6 +9,6 @@
 7. Confirm current region-specific Azure price assumptions, budget amount, alert recipients, subscription eligibility and domain ownership/availability. No domain purchase or billable resources authorized.
 8. Complete candidate publication, authenticated release, immutable revision smoke validation, rollout and rollback workflows. Manual deployment-preparation workflow does not deploy.
 9. Review/pin third-party CI actions by immutable SHA and add Terraform security scanning before infrastructure approval.
-10. MyPy currently runs baseline inference analysis, not strict typing of all CAD/inference contracts. Expand typed backend response models and module interfaces.
+10. MyPy currently runs baseline inference analysis, not strict typing of all CAD/inference contracts. Typed native worker geometry and parent validation are implemented; expand typed API response models and the remaining module interfaces.
 11. Browser screenshots show real local test/benchmark traffic, not production use. Maintain source labels and avoid importing generated traffic into any production environment.
 12. A Starlette deprecation warning notes httpx-based TestClient will migrate to httpx2. Tests currently pass; migrate with upstream compatibility validation rather than suppressing the warning.
