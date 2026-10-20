@@ -41,3 +41,10 @@ Compose and Helm enforce a read-only application root with explicit runtime/tmp 
 ## Certificate bundle advisory remediation
 
 Hosted dependency audit detected [GHSA-6q48-6c7w-9gw2](https://github.com/advisories/GHSA-6q48-6c7w-9gw2), published after the previous green pipeline: Certifi versions before 2026.10.19 include affected emSign trust roots. requirements.txt now pins the advisory's first fixed version, 2026.10.19. Official PyPI metadata identified the wheel SHA-256 as 42d35340cc5b9ba78e818ddbff0c5b1c2b779de448a340fd1b989f5fa8670e1b; the downloaded test wheel matched. No audit ignore was added. Compatibility tests use an isolated overlay while the user's running developer environment remains untouched; synchronize requirements before the next local app restart. Fresh CI/container builds install the corrected pin.
+
+
+## Upload body deadline
+
+Upload body reads now share one absolute thirty-second monotonic deadline, beginning after declared-size validation. Stalled and trickling clients receive HTTP 408 with a retryable upload detail; chunks cannot renew the budget. The receive wait is cancelled, existing rejected-body telemetry records one validation failure, and the admission gate releases normally. This timeout wraps body consumption only: completed bodies may proceed through the independent bounded CAD execution workflow. Other routes retain their existing behavior.
+
+The pinned Starlette multipart parser closes partial spool files when the stream raises; a real multipart regression tracks and verifies closure after a partial file has rolled to disk, then proves a subsequent upload succeeds. Cancellation and chunked trickling are also exercised. This is an application upload-body deadline, not a socket/header timeout, reverse-proxy policy, JSON-route deadline or distributed slow-client defense. Those ingress controls and aggregate resource limits remain necessary before hostile public exposure.
