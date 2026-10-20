@@ -18,3 +18,7 @@ artifacts/overview-initial.png
 
 .mypy_cache/
 .ruff_cache/
+
+# Generated static IaC scan reports are uploaded by CI; summary is tracked.
+artifacts/terraform-security.json
+artifacts/terraform-security-positive-control.json
