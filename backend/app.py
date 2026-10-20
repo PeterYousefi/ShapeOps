@@ -1,5 +1,4 @@
 import asyncio, json, logging, os, sqlite3, subprocess, sys, tempfile, time, uuid
-from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 from pathlib import Path
 import stat
@@ -11,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from backend.cad import SAMPLES, sample_shape, describe
 from backend.training import train, ROOT
-from backend.security import AdmissionMiddleware, BodyLimitMiddleware, run_worker
+from backend.security import AdmissionMiddleware, BodyLimitMiddleware, RateLimitMiddleware, run_worker
 from backend.worker_limits import MAX_RESULT_BYTES
 from backend.retention import initialize_retention, prune_records
 from backend.contracts import Geometry, validate_geometry
@@ -58,8 +57,8 @@ def rejected_body(scope):
 
 app.add_middleware(BodyLimitMiddleware, on_reject=rejected_body)
 app.add_middleware(AdmissionMiddleware, capacity=4)
+app.add_middleware(RateLimitMiddleware)
 semaphore = asyncio.Semaphore(2)
-rates: defaultdict[str, deque[float]] = defaultdict(deque)
 
 
 class InferenceInput(BaseModel):
@@ -82,19 +81,6 @@ async def headers(request: Request, call_next):
         }
     )
     return response
-
-
-def throttle(request):
-    key = request.client.host if request.client else "local"
-    now = time.monotonic()
-    q = rates[key]
-    while q and now - q[0] > 60:
-        q.popleft()
-    if len(q) >= 20:
-        raise HTTPException(
-            429, "Inference rate limit: 20 requests per minute. Try again shortly."
-        )
-    q.append(now)
 
 
 def record(
@@ -263,7 +249,6 @@ def download(key: str):
 
 @app.post("/api/inference/sample")
 async def sample_inference(payload: InferenceInput, request: Request):
-    throttle(request)
     started = time.perf_counter()
     if payload.sample not in app.state.samples:
         raise HTTPException(404, "Unknown sample")
@@ -332,7 +317,6 @@ async def upload(
     model: str = "surface-rf-v1",
     compare: bool = False,
 ):
-    throttle(request)
     started = time.perf_counter()
     trace = request.state.trace
     if model not in app.state.models:
@@ -446,7 +430,6 @@ def operations():
 
 @app.post("/api/operations/drill")
 async def drill(request: Request):
-    throttle(request)
     # Inject a broken adapter in an isolated in-memory test; stable model is never mutated.
     started = time.perf_counter()
     checks = []
