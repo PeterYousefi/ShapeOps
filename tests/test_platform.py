@@ -252,10 +252,24 @@ def test_registry_packages_match_real_runtime_models(client):
         directory = root / record["package_id"]
         manifest_bytes = (directory / "manifest.json").read_bytes()
         assert hashlib.sha256(manifest_bytes).hexdigest() == record["package_id"]
-        assert json.loads(manifest_bytes) == {key: value for key, value in record.items() if key != "package_id"}
+        assert json.loads(manifest_bytes) == {key: value for key, value in record.items() if key not in {"package_id", "run_id"}}
         assert hashlib.sha256((directory / "trees.json").read_bytes()).hexdigest() == record["checksum"]
         assert hashlib.sha256((directory / "estimator.joblib").read_bytes()).hexdigest() == record["package_checksum"]
         # Only our internally trained fixture artifact is deserialized here.
         estimator = joblib.load(directory / "estimator.joblib")
         x = np.array([face["features"] for face in app.state.samples["bracket"]["faces"]])
         assert np.array_equal(estimator.predict_proba(x), app.state.models[record["id"]].predict_proba(x))
+
+
+def test_actual_training_history_is_read_only_and_matches_current_registry(client):
+    records = client.get("/api/registry").json()
+    run_id = records[0]["run_id"]
+    history = client.get("/api/registry/runs?limit=1").json()
+    assert history["origin"] == "Actual completed local baseline training runs"
+    assert history["runs"][0]["id"] == run_id
+    detail = client.get(f"/api/registry/runs/{run_id}").json()
+    assert detail["started_at"] <= detail["completed_at"]
+    assert {m["package_id"] for m in detail["models"]} == {m["package_id"] for m in records}
+    assert client.get("/api/registry/runs?limit=101").status_code == 422
+    assert client.get("/api/registry/runs/missing").status_code == 404
+    assert client.post("/api/registry/runs").status_code == 405

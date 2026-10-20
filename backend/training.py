@@ -1,6 +1,6 @@
 """Reproducible surface-classification baseline on owned procedural solids."""
 
-import hashlib, json, subprocess, platform, os, io
+import hashlib, json, subprocess, platform, os, io, time
 from pathlib import Path
 import numpy as np
 import cadquery as cq
@@ -12,6 +12,7 @@ from sklearn.ensemble import (
 from sklearn.metrics import accuracy_score, f1_score, log_loss
 import sklearn
 import joblib
+from backend.registry import record_run
 from backend.packages import publish_package
 from backend.governance import evaluate_gates
 from backend.cad import features, LABELS, describe, sample_shape
@@ -20,6 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def train():
+    started_at = time.time()
     rng = np.random.default_rng(42)
     x = []
     y = []
@@ -83,7 +85,7 @@ def train():
     except Exception:
         commit = "uncommitted"
     source_paths = [
-        ROOT / "backend" / name for name in ["cad.py", "training.py", "governance.py", "packages.py"]
+        ROOT / "backend" / name for name in ["cad.py", "training.py", "governance.py", "packages.py", "registry.py"]
     ]
     source_hash = hashlib.sha256(
         b"".join(p.read_bytes() for p in source_paths)
@@ -183,6 +185,12 @@ def train():
         reference[rng.integers(0, 5, 250)] * (1 + rng.normal(0, 0.12, (250, 5))), 0.01
     )
     ood = IsolationForest(random_state=42, contamination=0.05).fit(jitter)
+    run_id = record_run(
+        Path(os.environ.get("SHAPEOPS_DATA_DIR", str(ROOT / ".runtime"))) / "registry.sqlite",
+        started_at, records,
+    )
+    for record in records:
+        record["run_id"] = run_id
     report = {
         "seed": 42,
         "dataset_hash": digest,

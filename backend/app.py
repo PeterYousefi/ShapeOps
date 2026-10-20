@@ -4,7 +4,7 @@ from pathlib import Path
 import stat
 import numpy as np
 import cadquery as cq
-from fastapi import FastAPI, File, UploadFile, HTTPException, Request
+from fastapi import FastAPI, File, UploadFile, HTTPException, Request, Query
 from fastapi.responses import Response, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -14,6 +14,7 @@ from backend.security import AdmissionMiddleware, BodyLimitMiddleware, RateLimit
 from backend.worker_limits import MAX_RESULT_BYTES
 from backend.retention import initialize_retention, prune_records
 from backend.contracts import Geometry, validate_geometry
+from backend.registry import list_runs, get_run
 
 logger = logging.getLogger("shapeops")
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -22,6 +23,7 @@ DB = (
     / "telemetry.sqlite"
 )
 DB.parent.mkdir(exist_ok=True)
+REGISTRY_DB = DB.parent / "registry.sqlite"
 
 
 def connection():
@@ -370,6 +372,19 @@ async def upload(
 @app.get("/api/registry")
 def registry():
     return app.state.registry
+
+
+@app.get("/api/registry/runs")
+def training_runs(limit: int = Query(20, ge=1, le=100)):
+    return {"origin": "Actual completed local baseline training runs", "runs": list_runs(REGISTRY_DB, limit)}
+
+
+@app.get("/api/registry/runs/{run_id}")
+def training_run(run_id: str):
+    result = get_run(REGISTRY_DB, run_id)
+    if result is None:
+        raise HTTPException(404, "Unknown training run")
+    return result
 
 
 @app.get("/api/telemetry")
