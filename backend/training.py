@@ -1,6 +1,6 @@
 """Reproducible surface-classification baseline on owned procedural solids."""
 
-import hashlib, json, subprocess, platform, os
+import hashlib, json, subprocess, platform, os, io
 from pathlib import Path
 import numpy as np
 import cadquery as cq
@@ -12,6 +12,7 @@ from sklearn.ensemble import (
 from sklearn.metrics import accuracy_score, f1_score, log_loss
 import sklearn
 import joblib
+from backend.packages import publish_package
 from backend.governance import evaluate_gates
 from backend.cad import features, LABELS, describe, sample_shape
 
@@ -82,7 +83,7 @@ def train():
     except Exception:
         commit = "uncommitted"
     source_paths = [
-        ROOT / "backend" / name for name in ["cad.py", "training.py", "governance.py"]
+        ROOT / "backend" / name for name in ["cad.py", "training.py", "governance.py", "packages.py"]
     ]
     source_hash = hashlib.sha256(
         b"".join(p.read_bytes() for p in source_paths)
@@ -117,20 +118,10 @@ def train():
         ]
         canonical = json.dumps(trees, sort_keys=True).encode()
         sha = hashlib.sha256(canonical).hexdigest()
-        package_dir = (
-            Path(os.environ.get("SHAPEOPS_DATA_DIR", str(ROOT / ".runtime")))
-            / "models"
-            / sha
-        )
-        package_dir.mkdir(parents=True, exist_ok=True)
-        artifact_path = package_dir / "trees.json"
-        if artifact_path.exists() and artifact_path.read_bytes() != canonical:
-            raise RuntimeError("Immutable artifact collision")
-        artifact_path.write_bytes(canonical)
-        joblib.dump(model, package_dir / "estimator.joblib")
-        package_sha = hashlib.sha256(
-            (package_dir / "estimator.joblib").read_bytes()
-        ).hexdigest()
+        serialized = io.BytesIO()
+        joblib.dump(model, serialized)
+        estimator_bytes = serialized.getvalue()
+        package_sha = hashlib.sha256(estimator_bytes).hexdigest()
         record = {
             "id": name,
             "stage": stage,
@@ -171,7 +162,11 @@ def train():
                 float(f1_score(y[test_mask], pred, average="macro")), True, True, False
             ),
         }
-        (package_dir / "manifest.json").write_text(json.dumps(record, indent=2))
+        package_id = publish_package(
+            Path(os.environ.get("SHAPEOPS_DATA_DIR", str(ROOT / ".runtime"))) / "models",
+            canonical, estimator_bytes, record,
+        )
+        record["package_id"] = package_id
         models[name] = model
         records.append(record)
     reference = np.array(
