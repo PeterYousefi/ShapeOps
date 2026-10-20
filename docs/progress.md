@@ -87,3 +87,11 @@ Training-journal PR #12 merged as 1d9f67c after all checks passed at 8534bed (ru
 All seven unique workflow action references now pin full commits resolved through owning-repository GitHub metadata, retaining original-version comments. Checkout does not persist credentials. A fail-closed workflow policy and seven regression tests reject mutable/short action refs, write-token overrides, persisted checkout credentials and pull_request_target, while preserving the four required job names. Weekly Dependabot action-update PRs are configured with no auto-merge workflow. See docs/ci-security.md for upstream commit links and limits; full upstream source audits, container digest pins and Terraform security scanning remain open.
 
 Local validation: 101 tests passed, one Linux-only memory skip (46.32s); workflow policy, Ruff across backend/scripts/tests, MyPy and TypeScript/Vite build passed. Application/UI source is unchanged. Browser and container/Kind verification for the newly pinned workflow must pass in hosted CI on the exact head before merge. No Azure deployment.
+
+## Reviewed action runtime refresh
+
+Policy PR #13 merged as 96b3afc after all checks passed at 30cf79f (run 39442956962): 102 Linux test passes, 10 browser passes and genuine Kind uploads before/after restart. Main had 49 reachable commits; governance passed.
+
+Dependabot PRs #14–#17 propose setup-terraform 4.0.1, setup-node 7.1.0, upload-artifact 7.0.2 and setup-python 7.0.0, each independently green at the same base. Their upstream tags/SHAs, action.yml runtime declarations and release/compatibility notes were checked. These Node 24 action upgrades are integrated as one cohesive workflow change to test the combined configuration; application runtimes remain Node 22/Python 3.14 and permissions remain read-only. Removed setup-python pip-install input is unused; no setup-node registry authentication is configured. This compatibility review is not a full bundled-source audit.
+
+Local verification: 101 tests passed, one Linux-only memory skip (43.37s); policy, Ruff/MyPy and frontend build passed. Runtime/UI source unchanged. Combined exact-head all-four hosted checks, including browser/Kind and produced evidence artifacts, remain required before merge. Superseded Dependabot PRs should close only after the integrated change merges. No Azure deployment.
