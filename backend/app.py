@@ -1,13 +1,14 @@
 import asyncio, json, logging, os, sqlite3, subprocess, sys, tempfile, time, uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import cast
 import stat
 import numpy as np
 import cadquery as cq
 from fastapi import FastAPI, File, UploadFile, HTTPException, Request, Query
 from fastapi.responses import Response, FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from backend.cad import SAMPLES, sample_shape, describe
 from backend.training import train, ROOT
 from backend.security import AdmissionMiddleware, BodyLimitMiddleware, RateLimitMiddleware, run_worker
@@ -15,6 +16,7 @@ from backend.worker_limits import MAX_RESULT_BYTES
 from backend.retention import initialize_retention, prune_records
 from backend.contracts import Geometry, validate_geometry
 from backend.registry import list_runs, get_run
+from backend.responses import InferenceResult
 
 logger = logging.getLogger("shapeops")
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -132,7 +134,7 @@ def record(
     )
 
 
-def infer(geometry, model, compare, trace, name, source, started, parse_ms):
+def infer(geometry, model, compare, trace, name, source, started, parse_ms) -> InferenceResult:
     if model not in app.state.models:
         raise ValueError("Unknown model version")
     execution_start = time.perf_counter()
@@ -141,13 +143,12 @@ def infer(geometry, model, compare, trace, name, source, started, parse_ms):
     probabilities = estimator.predict_proba(x)
     pred = estimator.classes_[probabilities.argmax(axis=1)]
     alternate = "surface-et-v2" if model == "surface-rf-v1" else "surface-rf-v1"
-    alternate_estimator = app.state.models[alternate] if compare else None
-    alternate_probabilities = alternate_estimator.predict_proba(x) if compare else None
-    other = (
-        alternate_estimator.classes_[alternate_probabilities.argmax(axis=1)]
-        if compare
-        else None
-    )
+    alternate_probabilities = None
+    other = None
+    if compare:
+        alternate_estimator = app.state.models[alternate]
+        alternate_probabilities = alternate_estimator.predict_proba(x)
+        other = alternate_estimator.classes_[alternate_probabilities.argmax(axis=1)]
     for i, f in enumerate(geometry["faces"]):
         f["prediction"] = str(pred[i])
         f["confidence"] = float(probabilities[i].max())
@@ -156,7 +157,7 @@ def infer(geometry, model, compare, trace, name, source, started, parse_ms):
             for label, value in zip(estimator.classes_, probabilities[i])
         }
         f["comparison_confidence"] = (
-            float(alternate_probabilities[i].max()) if compare else None
+            float(alternate_probabilities[i].max()) if alternate_probabilities is not None else None
         )
         f["candidate"] = str(other[i]) if other is not None else None
         f["disagreement"] = bool(other[i] != pred[i]) if other is not None else False
@@ -182,25 +183,13 @@ def infer(geometry, model, compare, trace, name, source, started, parse_ms):
                 dev,
             )
         ],
-        key=lambda r: -r["deviation"],
+        key=lambda r: -cast(float, r["deviation"]),
     )
     execution_ms = (time.perf_counter() - execution_start) * 1000
     total_ms = (time.perf_counter() - started) * 1000
     confidence = float(probabilities.max(axis=1).mean())
-    record(
-        trace,
-        source,
-        model,
-        True,
-        total_ms,
-        parse_ms,
-        execution_ms,
-        geometry["face_count"],
-        confidence,
-        ood,
-    )
     reg = next(r for r in app.state.registry if r["id"] == model)
-    return {
+    payload = {
         **geometry,
         "name": name,
         "source": source,
@@ -217,6 +206,25 @@ def infer(geometry, model, compare, trace, name, source, started, parse_ms):
         "disagreements": sum(f["disagreement"] for f in geometry["faces"]),
         "comparison_model": alternate if compare else None,
     }
+
+    try:
+        result = InferenceResult.model_validate(payload)
+    except ValidationError:
+        record(trace, source, model, False, total_ms, parse_ms, execution_ms, error="internal")
+        raise RuntimeError("Inference response contract failed") from None
+    record(
+        trace,
+        source,
+        model,
+        True,
+        total_ms,
+        parse_ms,
+        execution_ms,
+        geometry["face_count"],
+        confidence,
+        ood,
+    )
+    return result
 
 
 @app.get("/api/health")
@@ -249,7 +257,7 @@ def download(key: str):
         )
 
 
-@app.post("/api/inference/sample")
+@app.post("/api/inference/sample", response_model=InferenceResult)
 async def sample_inference(payload: InferenceInput, request: Request):
     started = time.perf_counter()
     if payload.sample not in app.state.samples:
@@ -312,7 +320,7 @@ def process_step(data: bytes) -> Geometry:
             raise ValueError(failure) from None
 
 
-@app.post("/api/inference/upload")
+@app.post("/api/inference/upload", response_model=InferenceResult)
 async def upload(
     request: Request,
     file: UploadFile = File(...),

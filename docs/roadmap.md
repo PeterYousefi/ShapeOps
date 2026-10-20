@@ -6,7 +6,7 @@ This is a working local application milestone. The complete autonomous engineeri
 | --- | --- | --- |
 | 1 Foundation | Local repo, specification, AGENTS, public GitHub remote, protected main and passing CI | Continue substantive issue/review history |
 | 2 CAD | Real STEP parsing, topology validation, typed worker result validation, tessellation, five upload round-trips | Broader corpus and pathological inputs; transport body cap now implemented |
-| 3 Inference | Trained analytic baselines and face-aware runtime | Industrial data/generalization and calibration |
+| 3 Inference | Trained analytic baselines, face-aware runtime and validated inference API responses | Industrial data/generalization and calibration |
 | 4 Frontend | Six screens, upload workflow, interactive viewer, responsive themes | Additional device/assistive-technology checks |
 | 5 Comparison | Distinct model versions, probabilities, disagreements and coloring | Broader regression corpus |
 | 6 Registry/governance | Atomic immutable local packages, append-only completed training journal, provenance, cards, pure gate evaluation | Archival/cloud durability, failed-attempt history, approvals and release lineage |

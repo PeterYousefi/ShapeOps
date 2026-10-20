@@ -273,3 +273,26 @@ def test_actual_training_history_is_read_only_and_matches_current_registry(clien
     assert client.get("/api/registry/runs?limit=101").status_code == 422
     assert client.get("/api/registry/runs/missing").status_code == 404
     assert client.post("/api/registry/runs").status_code == 405
+
+
+def test_openapi_exposes_shared_inference_schema(client):
+    schema = client.get("/openapi.json").json()
+    for path in ("/api/inference/sample", "/api/inference/upload"):
+        output = schema["paths"][path]["post"]["responses"]["200"]["content"]["application/json"]["schema"]
+        assert output == {"$ref": "#/components/schemas/InferenceResult"}
+    face = schema["components"]["schemas"]["FacePrediction"]
+    assert {"probabilities", "comparison_confidence", "positions", "id"} <= set(face["required"])
+    assert "features" not in face["properties"]
+
+
+def test_invalid_inference_output_is_not_recorded_as_success(client, monkeypatch):
+    import numpy as np
+    estimator = app.state.models["surface-rf-v1"]
+    monkeypatch.setattr(estimator, "predict_proba", lambda x: np.full((len(x), len(estimator.classes_)), np.nan))
+    before = client.get("/api/telemetry").json()
+    with pytest.raises(RuntimeError, match="Inference response contract failed"):
+        client.post("/api/inference/sample", json={"sample": "bracket"})
+    after = client.get("/api/telemetry").json()
+    assert after["successful"] == before["successful"]
+    assert after["failed"] == before["failed"] + 1
+    assert after["requests"][0]["error"] == "internal"
