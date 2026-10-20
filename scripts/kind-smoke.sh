@@ -34,6 +34,36 @@ assert all(face["positions"] for face in result["faces"])
 print("Sample STEP native worker smoke passed:", result["face_count"], "faces")
 PYSMOKE
 }
+shapeops_filesystem_smoke() {
+  kubectl exec -i deployment/shapeops -- python - <<'PYFILESYSTEM'
+import errno
+import json
+import os
+from pathlib import Path
+import tempfile
+
+assert os.getuid() == 10001
+assert not Path("/var/run/secrets/kubernetes.io/serviceaccount/token").exists()
+status = dict(line.split(":", 1) for line in Path("/proc/self/status").read_text().splitlines() if ":" in line)
+assert status["NoNewPrivs"].strip() == "1"
+assert status["Seccomp"].strip() == "2"
+assert int(status["CapEff"].strip(), 16) == 0
+try:
+    with tempfile.TemporaryFile(dir="/app/artifacts"):
+        pass
+except OSError as error:
+    assert error.errno == errno.EROFS, error
+else:
+    raise AssertionError("Application root was writable")
+for directory in ("/tmp", "/app/.runtime"):
+    with tempfile.TemporaryFile(dir=directory) as stream:
+        stream.write(b"actual writable-mount probe")
+        stream.flush()
+report = json.loads(Path("/app/.runtime/reports/evaluation.json").read_text())
+assert len(report["models"]) == 2 and all(model["run_id"] for model in report["models"])
+print("Read-only root, writable mounts, nonroot/no-capabilities, seccomp and absent service token verified")
+PYFILESYSTEM
+}
 docker build -t shapeops:local .
 kind load docker-image shapeops:local --name shapeops
 helm lint deploy/helm
@@ -41,7 +71,9 @@ helm upgrade --install shapeops deploy/helm --wait --timeout 300s
 kubectl rollout status deployment/shapeops --timeout=300s
 kubectl run smoke --image=curlimages/curl:8.16.0 --restart=Never --attach --rm -- curl --fail http://shapeops:8000/api/health
 kubectl run inference-smoke --image=curlimages/curl:8.16.0 --restart=Never --attach --rm -- curl --fail --silent --output /dev/null -X POST -H "Content-Type: application/json" --data '{"sample":"bracket","compare":true}' http://shapeops:8000/api/inference/sample
+shapeops_filesystem_smoke
 shapeops_upload_smoke
 kubectl rollout restart deployment/shapeops
 kubectl rollout status deployment/shapeops --timeout=300s
+shapeops_filesystem_smoke
 shapeops_upload_smoke

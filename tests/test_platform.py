@@ -2,6 +2,7 @@ import tempfile, os
 
 _TEST_DATA = tempfile.TemporaryDirectory(prefix="shapeops-test-data-")
 os.environ["SHAPEOPS_DATA_DIR"] = _TEST_DATA.name
+os.environ["SHAPEOPS_REPORT_DIR"] = os.path.join(_TEST_DATA.name, "reports")
 from pathlib import Path
 import cadquery as cq
 import pytest
@@ -296,3 +297,12 @@ def test_invalid_inference_output_is_not_recorded_as_success(client, monkeypatch
     assert after["successful"] == before["successful"]
     assert after["failed"] == before["failed"] + 1
     assert after["requests"][0]["error"] == "internal"
+
+
+def test_evaluation_report_uses_explicit_writable_directory(client):
+    import json
+    report_path = Path(os.environ["SHAPEOPS_REPORT_DIR"]) / "evaluation.json"
+    report = json.loads(report_path.read_text())
+    current = client.get("/api/registry").json()
+    assert report["models"] == current
+    assert all(model["run_id"] for model in report["models"])
