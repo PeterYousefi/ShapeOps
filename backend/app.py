@@ -13,6 +13,7 @@ from backend.cad import SAMPLES, sample_shape, describe
 from backend.training import train, ROOT
 from backend.security import AdmissionMiddleware, BodyLimitMiddleware, run_worker
 from backend.worker_limits import MAX_RESULT_BYTES
+from backend.retention import initialize_retention, prune_records
 
 logger = logging.getLogger("shapeops")
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -36,6 +37,7 @@ with connection() as db:
     db.execute(
         "CREATE TABLE IF NOT EXISTS drills (id TEXT PRIMARY KEY, at REAL, result TEXT)"
     )
+    initialize_retention(db)
 
 
 @asynccontextmanager
@@ -125,7 +127,7 @@ def record(
                 error,
             ),
         )
-        db.execute("DELETE FROM requests WHERE at < ?", (time.time() - 7 * 86400,))
+        prune_records(db)
     logger.info(
         json.dumps(
             {
@@ -387,9 +389,10 @@ def registry():
 @app.get("/api/telemetry")
 def telemetry():
     with connection() as db:
+        prune_records(db)
         rows = [
             dict(r)
-            for r in db.execute("SELECT * FROM requests ORDER BY at DESC LIMIT 1000")
+            for r in db.execute("SELECT * FROM requests ORDER BY at DESC, id DESC LIMIT 1000")
         ]
     ok = [r for r in rows if r["success"]]
     lat = [r["latency"] for r in ok]
@@ -423,9 +426,10 @@ def metrics():
 @app.get("/api/operations")
 def operations():
     with connection() as db:
+        prune_records(db)
         drills = [
             json.loads(r["result"])
-            for r in db.execute("SELECT result FROM drills ORDER BY at DESC LIMIT 20")
+            for r in db.execute("SELECT result FROM drills ORDER BY at DESC, id DESC LIMIT 20")
         ]
     return {
         "active": "surface-rf-v1",
@@ -476,6 +480,7 @@ async def drill(request: Request):
             "INSERT INTO drills VALUES (?,?,?)",
             (result["id"], result["at"], json.dumps(result)),
         )
+        prune_records(db)
     return result
 
 

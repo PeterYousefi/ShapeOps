@@ -214,3 +214,29 @@ def test_comparison_confidence_matches_other_estimator(client):
         assert right["candidate"] == left["prediction"]
         assert left["comparison_confidence"] == pytest.approx(right["confidence"])
         assert right["comparison_confidence"] == pytest.approx(left["confidence"])
+
+
+def test_idle_api_reads_expire_persistent_records(client, tmp_path, monkeypatch):
+    import importlib
+    import sqlite3
+    import time
+    module = importlib.import_module("backend.app")
+    isolated = tmp_path / "isolated.sqlite"
+    with module.connection() as source, sqlite3.connect(isolated) as target:
+        source.backup(target)
+    monkeypatch.setattr(module, "DB", isolated)
+    now = time.time()
+    with module.connection() as db:
+        db.execute("DELETE FROM requests")
+        db.execute("DELETE FROM drills")
+        db.execute(
+            "INSERT INTO requests VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            ("expired-request", now - 8 * 86400, "sample", "surface-rf-v1", 1, 1, 0, 1, 10, .9, 0, ""),
+        )
+        db.execute("INSERT INTO drills VALUES (?,?,?)", ("expired", now - 31 * 86400, '{"id":"expired"}'))
+        db.execute("INSERT INTO drills VALUES (?,?,?)", ("recent", now, '{"id":"recent"}'))
+    assert client.get("/api/telemetry").json()["total"] == 0
+    assert client.get("/api/operations").json()["drills"] == [{"id": "recent"}]
+    with module.connection() as db:
+        assert db.execute("SELECT COUNT(*) FROM requests").fetchone()[0] == 0
+        assert db.execute("SELECT id FROM drills").fetchall()[0][0] == "recent"
