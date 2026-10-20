@@ -15,7 +15,7 @@ This is a working local application milestone. The complete autonomous engineeri
 | 9 Operations | Isolated injected adapter failure and recovery checks | Authorized release state and tested revision rollback |
 | 10 Security/reliability | Upload/runtime limits, bounded worker output, native CPU/file budgets, Linux memory ceilings, pre-body admission/rate caps with bounded local peer state, cancellation-safe worker slots, cleanup, forbidden promotion, dependency audits | Full worker filesystem/network isolation, aggregate budgets, distributed abuse controls, OIDC |
 | 11 Containers/Kubernetes | Docker/Compose, Helm lint/render and Kind smoke script | Actual build/Kind inference/recovery/critical scan now pass; broader image sizing and Grafana verification remain |
-| 12 CI/CD | Quality workflow and deployment-preparation boundary | All four source CI jobs now green; protected production environment and full publication/release/rollback pipeline remain |
+| 12 CI/CD | Quality workflow, immutable action pins/policy, dependency update PRs and deployment-preparation boundary | All four source CI jobs now green; protected production environment and full publication/release/rollback pipeline remain |
 | 13 Terraform/Azure readiness | Validated provider schema and bounded architecture | Security analysis, approved plan/cost/budget and durable storage adapters |
 | 14 Product audit | Backend/browser tests, screenshots, axe, benchmark, fixes | Full acceptance, container scans and full adversarial corpus |
 | 15 Azure | No resources provisioned | Explicit approval plus readiness before any deployment or purchase |
