@@ -1,4 +1,4 @@
-"""Public inference output contracts; preserve CAD face identity and actual scores."""
+"""Public engineering API contracts; preserve real geometry and operational state."""
 import math
 from typing import Annotated, Literal, Self
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -79,3 +79,75 @@ class InferenceResult(OutputModel):
                 or any((face.candidate is not None) != compared for face in self.faces)):
             raise ValueError("Inconsistent comparison model metadata")
         return self
+
+
+class RequestRecord(OutputModel):
+    id: str
+    at: Nonnegative
+    source: Literal["sample", "upload"]
+    model: str
+    success: Annotated[int, Field(ge=0, le=1)]
+    latency: Nonnegative
+    parse: Nonnegative
+    execution: Nonnegative
+    faces: Annotated[int, Field(ge=0, le=600)]
+    confidence: Probability
+    ood: Annotated[int, Field(ge=0, le=1)]
+    error: str
+
+
+class TelemetryResponse(OutputModel):
+    origin: str
+    total: Annotated[int, Field(ge=0, le=1000)]
+    successful: Annotated[int, Field(ge=0)]
+    failed: Annotated[int, Field(ge=0)]
+    p50: Nonnegative | None
+    p95: Nonnegative | None
+    ood_rate: Probability | None
+    requests: Annotated[list[RequestRecord], Field(max_length=1000)]
+    throughput_per_minute: Annotated[int, Field(ge=0)]
+
+    @model_validator(mode="after")
+    def consistent_window(self) -> Self:
+        successes = sum(row.success for row in self.requests)
+        if (self.total != len(self.requests) or self.successful != successes
+                or self.failed != self.total - successes or self.throughput_per_minute > self.total):
+            raise ValueError("Telemetry totals do not match retained requests")
+        if successes == 0:
+            if any(value is not None for value in (self.p50, self.p95, self.ood_rate)):
+                raise ValueError("Unavailable successful-request metrics must be null")
+        elif (self.p50 is None or self.p95 is None or self.ood_rate is None
+                or self.p50 > self.p95
+                or not math.isclose(self.ood_rate, sum(row.ood for row in self.requests if row.success) / successes, abs_tol=1e-8)):
+            raise ValueError("Inconsistent successful-request metrics")
+        return self
+
+
+class DrillCheck(OutputModel):
+    name: str
+    passed: bool
+
+
+class DrillResult(OutputModel):
+    id: Annotated[str, Field(pattern=r"^[a-f0-9]{12}$")]
+    at: Nonnegative
+    passed: bool
+    checks: Annotated[list[DrillCheck], Field(min_length=1, max_length=32)]
+    duration_ms: Nonnegative
+    scope: Literal["Isolated adapter test. No deployment or production mutation."]
+
+    @model_validator(mode="after")
+    def consistent_checks(self) -> Self:
+        if self.passed != all(check.passed for check in self.checks):
+            raise ValueError("Drill summary does not match executed checks")
+        return self
+
+
+class OperationsResponse(OutputModel):
+    active: str
+    candidate: str
+    environment: Literal["Local development"]
+    production: Literal["Not deployed"]
+    release_history: Annotated[list[dict], Field(max_length=0)]
+    drills: Annotated[list[DrillResult], Field(max_length=20)]
+    promotion: str

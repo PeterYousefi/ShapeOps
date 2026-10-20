@@ -16,7 +16,7 @@ from backend.worker_limits import MAX_RESULT_BYTES
 from backend.retention import initialize_retention, prune_records
 from backend.contracts import Geometry, validate_geometry
 from backend.registry import list_runs, get_run
-from backend.responses import InferenceResult
+from backend.responses import InferenceResult, TelemetryResponse, OperationsResponse, DrillResult
 
 logger = logging.getLogger("shapeops")
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -395,8 +395,8 @@ def training_run(run_id: str):
     return result
 
 
-@app.get("/api/telemetry")
-def telemetry():
+@app.get("/api/telemetry", response_model=TelemetryResponse)
+def telemetry() -> TelemetryResponse:
     with connection() as db:
         prune_records(db)
         rows = [
@@ -405,7 +405,7 @@ def telemetry():
         ]
     ok = [r for r in rows if r["success"]]
     lat = [r["latency"] for r in ok]
-    return {
+    return TelemetryResponse.model_validate({
         "origin": "Actual local runtime · latest 1,000 requests · 7-day retention",
         "total": len(rows),
         "successful": len(ok),
@@ -415,32 +415,32 @@ def telemetry():
         "ood_rate": sum(r["ood"] for r in ok) / len(ok) if ok else None,
         "requests": rows,
         "throughput_per_minute": sum(r["at"] > time.time() - 60 for r in rows),
-    }
+    })
 
 
 @app.get("/metrics")
-def metrics():
+def metrics() -> Response:
     t = telemetry()
     lines = [
         "# HELP shapeops_inference_requests Observed inference requests in retained local window",
         "# TYPE shapeops_inference_requests gauge",
-        f'shapeops_inference_requests{{outcome="success"}} {t["successful"]}',
-        f'shapeops_inference_requests{{outcome="failure"}} {t["failed"]}',
+        f'shapeops_inference_requests{{outcome="success"}} {t.successful}',
+        f'shapeops_inference_requests{{outcome="failure"}} {t.failed}',
     ]
-    for r in t["requests"][:1]:
-        lines.append(f"shapeops_last_request_latency_ms {r['latency']}")
+    for r in t.requests[:1]:
+        lines.append(f"shapeops_last_request_latency_ms {r.latency}")
     return Response("\n".join(lines) + "\n", media_type="text/plain; version=0.0.4")
 
 
-@app.get("/api/operations")
-def operations():
+@app.get("/api/operations", response_model=OperationsResponse)
+def operations() -> OperationsResponse:
     with connection() as db:
         prune_records(db)
         drills = [
             json.loads(r["result"])
             for r in db.execute("SELECT result FROM drills ORDER BY at DESC, id DESC LIMIT 20")
         ]
-    return {
+    return OperationsResponse.model_validate({
         "active": "surface-rf-v1",
         "candidate": "surface-et-v2",
         "environment": "Local development",
@@ -448,11 +448,11 @@ def operations():
         "release_history": [],
         "drills": drills,
         "promotion": "Blocked: security scan and authorized production environment required",
-    }
+    })
 
 
-@app.post("/api/operations/drill")
-async def drill(request: Request):
+@app.post("/api/operations/drill", response_model=DrillResult)
+async def drill(request: Request) -> DrillResult:
     # Inject a broken adapter in an isolated in-memory test; stable model is never mutated.
     started = time.perf_counter()
     checks = []
@@ -475,18 +475,18 @@ async def drill(request: Request):
             "passed": app.state.registry[0]["stage"] == "stable",
         }
     )
-    result = {
+    result = DrillResult.model_validate({
         "id": uuid.uuid4().hex[:12],
         "at": time.time(),
         "passed": all(c["passed"] for c in checks),
         "checks": checks,
         "duration_ms": (time.perf_counter() - started) * 1000,
         "scope": "Isolated adapter test. No deployment or production mutation.",
-    }
+    })
     with connection() as db:
         db.execute(
             "INSERT INTO drills VALUES (?,?,?)",
-            (result["id"], result["at"], json.dumps(result)),
+            (result.id, result.at, result.model_dump_json()),
         )
         prune_records(db)
     return result

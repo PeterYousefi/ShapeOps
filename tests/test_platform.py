@@ -101,7 +101,9 @@ def test_telemetry_and_prometheus_are_actual(client):
     after = client.get("/api/telemetry").json()
     assert after["total"] == before + 1
     assert after["p95"] > 0
-    assert "shapeops_inference_requests" in client.get("/metrics").text
+    metrics_text = client.get("/metrics").text
+    assert f'shapeops_inference_requests{{outcome="success"}} {after["successful"]}' in metrics_text
+    assert f'shapeops_inference_requests{{outcome="failure"}} {after["failed"]}' in metrics_text
 
 
 def test_isolated_drill_executes_recovery(client):
@@ -218,6 +220,7 @@ def test_comparison_confidence_matches_other_estimator(client):
 
 
 def test_idle_api_reads_expire_persistent_records(client, tmp_path, monkeypatch):
+    import json
     import importlib
     import sqlite3
     import time
@@ -227,6 +230,9 @@ def test_idle_api_reads_expire_persistent_records(client, tmp_path, monkeypatch)
         source.backup(target)
     monkeypatch.setattr(module, "DB", isolated)
     now = time.time()
+    recent = {"id": "d" * 12, "at": now, "passed": True, "duration_ms": 1.0,
+              "checks": [{"name": "Unit retention fixture", "passed": True}],
+              "scope": "Isolated adapter test. No deployment or production mutation."}
     with module.connection() as db:
         db.execute("DELETE FROM requests")
         db.execute("DELETE FROM drills")
@@ -235,12 +241,12 @@ def test_idle_api_reads_expire_persistent_records(client, tmp_path, monkeypatch)
             ("expired-request", now - 8 * 86400, "sample", "surface-rf-v1", 1, 1, 0, 1, 10, .9, 0, ""),
         )
         db.execute("INSERT INTO drills VALUES (?,?,?)", ("expired", now - 31 * 86400, '{"id":"expired"}'))
-        db.execute("INSERT INTO drills VALUES (?,?,?)", ("recent", now, '{"id":"recent"}'))
+        db.execute("INSERT INTO drills VALUES (?,?,?)", (recent["id"], now, json.dumps(recent)))
     assert client.get("/api/telemetry").json()["total"] == 0
-    assert client.get("/api/operations").json()["drills"] == [{"id": "recent"}]
+    assert client.get("/api/operations").json()["drills"] == [recent]
     with module.connection() as db:
         assert db.execute("SELECT COUNT(*) FROM requests").fetchone()[0] == 0
-        assert db.execute("SELECT id FROM drills").fetchall()[0][0] == "recent"
+        assert db.execute("SELECT id FROM drills").fetchall()[0][0] == recent["id"]
 
 
 def test_registry_packages_match_real_runtime_models(client):
@@ -306,3 +312,16 @@ def test_evaluation_report_uses_explicit_writable_directory(client):
     current = client.get("/api/registry").json()
     assert report["models"] == current
     assert all(model["run_id"] for model in report["models"])
+
+
+def test_operational_openapi_contracts_and_disabled_promotion(client):
+    schema = client.get("/openapi.json").json()
+    for path, method, name in (
+        ("/api/telemetry", "get", "TelemetryResponse"),
+        ("/api/operations", "get", "OperationsResponse"),
+        ("/api/operations/drill", "post", "DrillResult"),
+    ):
+        output = schema["paths"][path][method]["responses"]["200"]["content"]["application/json"]["schema"]
+        assert output == {"$ref": f"#/components/schemas/{name}"}
+    assert schema["components"]["schemas"]["OperationsResponse"]["properties"]["release_history"]["maxItems"] == 0
+    assert client.post("/api/operations/promote").status_code == 403
