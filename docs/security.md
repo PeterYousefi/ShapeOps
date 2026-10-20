@@ -33,3 +33,7 @@ A per-process ASGI gate admits at most four POST requests across sample inferenc
 ## Native geometry protocol
 
 The parent validates the decoded worker result against typed `Geometry`/`GeometryFace` contracts before inference: exact field sets, finite numeric values (excluding booleans), six nonnegative numerical descriptors, known analytic surface labels, positive face count matching the list, and contiguous IDs in the parser's original order. Nonnegative rounded area/volume can be zero for small solids. Bounds must have three finite extents within the existing 10,000 mm limit; triangle arrays must be nonempty multiples of nine, within existing per-face and total mesh budgets. Invalid results receive the existing generic processing rejection and temporary cleanup. Validation does not renumber faces, synthesize statistics or establish geometric/industrial correctness; native validity checks and isolation requirements remain separate.
+
+## Deployment filesystem controls
+
+Compose and Helm enforce a read-only application root with explicit runtime/tmp writes. Helm adds runtime-default seccomp and removes unnecessary service tokens. Container reports use SHAPEOPS_REPORT_DIR under the runtime mount. See [container-security.md](container-security.md) for actual runtime probes and remaining child-process isolation limits; a read-only root is not a complete native parser sandbox.

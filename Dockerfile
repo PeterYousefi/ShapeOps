@@ -8,7 +8,7 @@ RUN npm run build
 
 FROM ubuntu:26.04 AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 MPLCONFIGDIR=/tmp/matplotlib XDG_CACHE_HOME=/tmp/cache
-ENV PATH="/opt/venv/bin:${PATH}"
+ENV PATH="/opt/venv/bin:${PATH}" SHAPEOPS_REPORT_DIR=/app/.runtime/reports
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates python3.14 python3.14-venv libgl1 libglu1-mesa libxrender1 libxext6 libsm6 libgomp1 && rm -rf /var/lib/apt/lists/* && useradd --uid 10001 --create-home app && python3.14 -m venv /opt/venv
 COPY requirements.txt ./

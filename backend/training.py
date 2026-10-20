@@ -198,8 +198,9 @@ def train():
         "reference": reference.tolist(),
         "scope": "Owned procedural analytic CAD. Parameter-group held-out split.",
     }
-    (ROOT / "artifacts").mkdir(exist_ok=True)
-    (ROOT / "artifacts" / "evaluation.json").write_text(json.dumps(report, indent=2))
+    report_directory = Path(os.environ.get("SHAPEOPS_REPORT_DIR", str(ROOT / "artifacts")))
+    report_directory.mkdir(parents=True, exist_ok=True)
+    (report_directory / "evaluation.json").write_text(json.dumps(report, indent=2))
     return models, records, ood, reference
 
 
