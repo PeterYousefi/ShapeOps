@@ -1,6 +1,10 @@
 """Transport and admission limits before multipart parsing/spooling."""
 
 import asyncio
+import math
+import time
+from collections import deque
+from collections.abc import Callable
 
 from fastapi import HTTPException
 from starlette.responses import JSONResponse
@@ -105,3 +109,56 @@ async def run_worker(function, *args):
             task.exception()
         raise asyncio.CancelledError
     return task.result()
+
+
+class RateLimitMiddleware:
+    """Per-process rolling-window throttle before admission or body consumption."""
+
+    def __init__(self, app, limit: int = 20, window: int = 60,
+                 max_clients: int = 4096, clock: Callable[[], float] = time.monotonic) -> None:
+        if min(limit, window, max_clients) < 1:
+            raise ValueError("Rate-limit budgets must be positive")
+        self.app = app
+        self.limit = limit
+        self.window = window
+        self.max_clients = max_clients
+        self.clock = clock
+        self.clients: dict[str, deque[float]] = {}
+
+    async def __call__(self, scope, receive, send):
+        if (scope["type"] != "http" or scope.get("method") != "POST"
+                or scope["path"] not in AdmissionMiddleware.PATHS):
+            await self.app(scope, receive, send)
+            return
+        now = self.clock()
+        cutoff = now - self.window
+        # Bound storage even when many distinct peers attempt requests. Never evict
+        # an active peer to admit a new one, which would reset abuse history.
+        for peer, history in list(self.clients.items()):
+            if history[-1] <= cutoff:
+                del self.clients[peer]
+        client = scope.get("client")
+        key = client[0] if client else "local"
+        history = self.clients.get(key)
+        if history is None:
+            if len(self.clients) >= self.max_clients:
+                await JSONResponse(
+                    {"detail": "Local rate-limit capacity is busy. Retry shortly."},
+                    status_code=503, headers={"Retry-After": str(self.window)},
+                )(scope, receive, send)
+                return
+            history = self.clients[key] = deque()
+        while history and history[0] <= cutoff:
+            history.popleft()
+        if len(history) >= self.limit:
+            retry = max(1, math.ceil(history[0] + self.window - now))
+            await JSONResponse(
+                {"detail": f"Inference rate limit: {self.limit} requests per {self.window} seconds. Try again shortly."},
+                status_code=429, headers={"Retry-After": str(retry)},
+            )(scope, receive, send)
+            return
+        # Check and record without yielding; all attempted protected POSTs count,
+        # including invalid bodies and admission overloads. Forwarded headers do
+        # not select the key here; trusted proxy policy belongs to the ASGI server.
+        history.append(now)
+        await self.app(scope, receive, send)
