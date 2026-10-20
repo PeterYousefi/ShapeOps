@@ -325,3 +325,60 @@ def test_operational_openapi_contracts_and_disabled_promotion(client):
         assert output == {"$ref": f"#/components/schemas/{name}"}
     assert schema["components"]["schemas"]["OperationsResponse"]["properties"]["release_history"]["maxItems"] == 0
     assert client.post("/api/operations/promote").status_code == 403
+
+
+def test_registry_history_openapi_contracts(client):
+    schemas = client.get('/openapi.json').json()
+    paths = schemas['paths']
+    registry_schema = paths['/api/registry']['get']['responses']['200']['content']['application/json']['schema']
+    assert registry_schema['items']['$ref'].endswith('/RegisteredModel')
+    for path, name in [('/api/registry/runs', 'TrainingHistory'), ('/api/registry/runs/{run_id}', 'TrainingRunDetail')]:
+        assert paths[path]['get']['responses']['200']['content']['application/json']['schema']['$ref'].endswith('/' + name)
+
+
+@pytest.mark.parametrize('field,value', [
+    ('accuracy', float('nan')), ('macro_f1', 1.1), ('heldout_log_loss', -1.0),
+    ('training_rows', 0), ('package_id', 'not-a-digest'), ('git_dirty', 'false'),
+    ('classes', ['Planar', 'Planar']), ('features', ['area', 'area']),
+    ('stage', 'production'), ('internal_secret', 'must-not-leak'),
+])
+def test_registry_rejects_invalid_internal_manifests(client, field, value):
+    from copy import deepcopy
+    from pydantic import ValidationError
+    from fastapi.exceptions import ResponseValidationError
+    from backend.responses import RegisteredModel
+    invalid = deepcopy(app.state.registry[0])
+    invalid[field] = value
+    with pytest.raises(ValidationError):
+        RegisteredModel.model_validate(invalid)
+    original = app.state.registry
+    try:
+        app.state.registry = [invalid]
+        with pytest.raises(ResponseValidationError):
+            client.get('/api/registry')
+    finally:
+        app.state.registry = original
+
+
+def test_history_rejects_inconsistent_run_relationships(client):
+    from copy import deepcopy
+    from pydantic import ValidationError
+    from backend.responses import TrainingHistory, TrainingRunDetail, TrainingRunSummary
+    history = client.get('/api/registry/runs?limit=1').json()
+    run_id = history['runs'][0]['id']
+    detail = client.get(f'/api/registry/runs/{run_id}').json()
+    TrainingRunDetail.model_validate(detail)
+    TrainingHistory.model_validate(history)
+    duplicate = deepcopy(history)
+    duplicate['runs'].append(deepcopy(duplicate['runs'][0]))
+    with pytest.raises(ValidationError):
+        TrainingHistory.model_validate(duplicate)
+    for key, value in [('completed_at', detail['started_at'] - 1), ('models', []), ('id', 'invalid')]:
+        invalid = {**detail, key: value}
+        with pytest.raises(ValidationError):
+            TrainingRunDetail.model_validate(invalid)
+    for document, model in [(detail, TrainingRunDetail), (history['runs'][0], TrainingRunSummary)]:
+        invalid = deepcopy(document)
+        invalid['models'].append(deepcopy(invalid['models'][0]))
+        with pytest.raises(ValidationError):
+            model.model_validate(invalid)

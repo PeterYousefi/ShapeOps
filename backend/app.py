@@ -16,7 +16,7 @@ from backend.worker_limits import MAX_RESULT_BYTES
 from backend.retention import initialize_retention, prune_records
 from backend.contracts import Geometry, validate_geometry
 from backend.registry import list_runs, get_run
-from backend.responses import InferenceResult, TelemetryResponse, OperationsResponse, DrillResult
+from backend.responses import InferenceResult, TelemetryResponse, OperationsResponse, DrillResult, RegisteredModel, TrainingHistory, TrainingRunDetail
 
 logger = logging.getLogger("shapeops")
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -377,17 +377,17 @@ async def upload(
         await file.close()
 
 
-@app.get("/api/registry")
+@app.get("/api/registry", response_model=list[RegisteredModel])
 def registry():
     return app.state.registry
 
 
-@app.get("/api/registry/runs")
+@app.get("/api/registry/runs", response_model=TrainingHistory)
 def training_runs(limit: int = Query(20, ge=1, le=100)):
     return {"origin": "Actual completed local baseline training runs", "runs": list_runs(REGISTRY_DB, limit)}
 
 
-@app.get("/api/registry/runs/{run_id}")
+@app.get("/api/registry/runs/{run_id}", response_model=TrainingRunDetail)
 def training_run(run_id: str):
     result = get_run(REGISTRY_DB, run_id)
     if result is None:
