@@ -1,0 +1,25 @@
+{
+  "scanner": "Trivy 0.76.0",
+  "policy": "embedded checks; fresh cache; skip-check-update",
+  "baseline_high_critical": 1,
+  "fixed_high_critical": 0,
+  "positive_control_high_critical": 5,
+  "remaining_lower_severity": [
+    {
+      "id": "AZU-0057",
+      "severity": "MEDIUM",
+      "title": "Storage account should have logging enabled"
+    },
+    {
+      "id": "AZU-0058",
+      "severity": "LOW",
+      "title": "Storage account should use geo-redundant replication"
+    },
+    {
+      "id": "AZU-0061",
+      "severity": "MEDIUM",
+      "title": "Storage account should have infrastructure encryption enabled"
+    }
+  ],
+  "scope": "Local static Terraform analysis only. No Azure authentication, plan or apply."
+}

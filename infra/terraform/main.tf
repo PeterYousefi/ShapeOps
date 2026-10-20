@@ -56,6 +56,11 @@ resource "azurerm_storage_account" "artifacts" {
   shared_access_key_enabled       = false
   allow_nested_items_to_be_public = false
   https_traffic_only_enabled      = true
+  public_network_access_enabled   = false
+  network_rules {
+    default_action = "Deny"
+    bypass         = ["AzureServices"]
+  }
   blob_properties {
     delete_retention_policy { days = 7 }
   }
