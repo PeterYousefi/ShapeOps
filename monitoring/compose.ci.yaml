@@ -1,0 +1,10 @@
+# Applied only by the explicit smoke script; serving development ports stay untouched.
+services:
+  shapeops:
+    image: shapeops:ci
+    pull_policy: never
+    ports: !override ["127.0.0.1:18000:8000"]
+  prometheus:
+    ports: !override ["127.0.0.1:19090:9090"]
+  grafana:
+    ports: !override ["127.0.0.1:13000:3000"]
