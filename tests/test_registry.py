@@ -74,3 +74,62 @@ def test_bounded_read_limits(tmp_path):
     for limit in (0, -1, 101):
         with pytest.raises(ValueError):
             list_runs(tmp_path / "absent.sqlite", limit)
+
+
+def test_readonly_connection_cannot_write_and_preserves_uri_path(tmp_path):
+    path = tmp_path / 'journal ?# space' / 'registry.sqlite'
+    run_id = record_run(path, time.time(), [record()])
+    db = connect(path, readonly=True)
+    try:
+        assert db.execute('PRAGMA query_only').fetchone()[0] == 1
+        with pytest.raises(sqlite3.OperationalError, match='readonly'):
+            db.execute("INSERT INTO training_runs VALUES ('forbidden',0,0)")
+        db.execute('PRAGMA query_only=OFF')
+        # The URI's mode=ro remains effective even with the extra pragma disabled.
+        with pytest.raises(sqlite3.OperationalError, match='readonly'):
+            db.execute('CREATE TABLE forbidden(value TEXT)')
+    finally:
+        db.close()
+    assert get_run(path, run_id)['models'] == [record()]
+    assert list_runs(path)[0]['id'] == run_id
+
+
+def test_readonly_open_never_creates_missing_journal_or_parent(tmp_path):
+    missing = tmp_path / 'absent' / 'registry.sqlite'
+    assert list_runs(missing) == [] and get_run(missing, 'missing') is None
+    with pytest.raises(sqlite3.OperationalError):
+        connect(missing, readonly=True)
+    assert not missing.parent.exists()
+
+
+@pytest.mark.parametrize('corruption', ['bytes', 'identity', 'empty', 'too_many', 'non_object', 'embedded_package', 'invalid_json'])
+def test_summary_and_detail_fail_closed_on_corrupted_journal(tmp_path, corruption):
+    path = tmp_path / 'registry.sqlite'
+    run_id = record_run(path, time.time(), [record()])
+    # Explicit owner-level corruption fixture, not a claim of owner-tamper resistance.
+    db = connect(path)
+    try:
+        with db:
+            db.execute('DROP TRIGGER immutable_run_models_update')
+            db.execute('DROP TRIGGER immutable_run_models_delete')
+            if corruption == 'bytes':
+                db.execute("UPDATE run_models SET manifest='{}'")
+            elif corruption == 'identity':
+                db.execute("UPDATE run_models SET model_id='different'")
+            elif corruption == 'empty':
+                db.execute('DELETE FROM run_models')
+            elif corruption == 'too_many':
+                for n in range(16):
+                    fixture = record(f'additional-{n}')
+                    manifest = {k: v for k, v in fixture.items() if k != 'package_id'}
+                    db.execute('INSERT INTO run_models VALUES (?,?,?,?)', (run_id, fixture['id'], fixture['package_id'], json.dumps(manifest, sort_keys=True, separators=(',', ':'))))
+            else:
+                manifest = [] if corruption == 'non_object' else {'id': 'fixture', 'package_id': 'embedded'}
+                encoded = '{invalid' if corruption == 'invalid_json' else json.dumps(manifest, sort_keys=True, separators=(',', ':'))
+                digest = hashlib.sha256(encoded.encode()).hexdigest()
+                db.execute('UPDATE run_models SET manifest=?,package_id=?', (encoded, digest))
+    finally:
+        db.close()
+    for read in (lambda: list_runs(path), lambda: get_run(path, run_id)):
+        with pytest.raises(ValueError, match='integrity check failed'):
+            read()

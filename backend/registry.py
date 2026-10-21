@@ -7,9 +7,15 @@ import time
 import uuid
 
 
-def connect(path: Path) -> sqlite3.Connection:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    db = sqlite3.connect(path)
+def connect(path: Path, *, readonly: bool = False) -> sqlite3.Connection:
+    if readonly:
+        # URI escaping preserves spaces, question marks and hashes in local paths.
+        # mode=ro also fails closed if the file disappears after an existence check.
+        db = sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True)
+        db.execute("PRAGMA query_only=ON")
+    else:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        db = sqlite3.connect(path)
     db.row_factory = sqlite3.Row
     db.execute("PRAGMA foreign_keys=ON")
     return db
@@ -49,17 +55,43 @@ def record_run(path: Path, started_at: float, records: list[dict]) -> str:
     return run_id
 
 
+def _read_models(db: sqlite3.Connection, run_id: str) -> list[dict]:
+    rows = db.execute(
+        "SELECT model_id,package_id,manifest FROM run_models WHERE run_id=? ORDER BY model_id LIMIT 17",
+        (run_id,),
+    ).fetchall()
+    if not 1 <= len(rows) <= 16:
+        raise ValueError("Training journal model count integrity check failed")
+    models = []
+    for row in rows:
+        encoded = row["manifest"]
+        if hashlib.sha256(encoded.encode()).hexdigest() != row["package_id"]:
+            raise ValueError("Training journal manifest integrity check failed")
+        try:
+            manifest = json.loads(encoded)
+        except json.JSONDecodeError:
+            raise ValueError("Training journal manifest integrity check failed") from None
+        if not isinstance(manifest, dict) or manifest.get("id") != row["model_id"] or "package_id" in manifest:
+            raise ValueError("Training journal model identity integrity check failed")
+        models.append({**manifest, "package_id": row["package_id"]})
+    return models
+
+
 def list_runs(path: Path, limit: int = 20) -> list[dict]:
     if not 1 <= limit <= 100:
         raise ValueError("History limit must be between one and one hundred")
     if not path.exists():
         return []
-    db = connect(path)
+    db = connect(path, readonly=True)
     try:
+        db.execute("BEGIN")
         rows = db.execute("SELECT * FROM training_runs ORDER BY completed_at DESC,id DESC LIMIT ?", (limit,)).fetchall()
-        return [{**dict(row), "models": [dict(model) for model in db.execute(
-            "SELECT model_id,package_id FROM run_models WHERE run_id=? ORDER BY model_id", (row["id"],)
-        )]} for row in rows]
+        runs = []
+        for row in rows:
+            models = _read_models(db, row["id"])
+            references = [{"model_id": model["id"], "package_id": model["package_id"]} for model in models]
+            runs.append({**dict(row), "models": references})
+        return runs
     finally:
         db.close()
 
@@ -67,17 +99,13 @@ def list_runs(path: Path, limit: int = 20) -> list[dict]:
 def get_run(path: Path, run_id: str) -> dict | None:
     if not path.exists():
         return None
-    db = connect(path)
+    db = connect(path, readonly=True)
     try:
+        db.execute("BEGIN")
         row = db.execute("SELECT * FROM training_runs WHERE id=?", (run_id,)).fetchone()
         if row is None:
             return None
-        models = []
-        for model in db.execute("SELECT * FROM run_models WHERE run_id=? ORDER BY model_id", (run_id,)):
-            encoded = model["manifest"]
-            if hashlib.sha256(encoded.encode()).hexdigest() != model["package_id"]:
-                raise ValueError("Training journal manifest integrity check failed")
-            models.append({**json.loads(encoded), "package_id": model["package_id"]})
+        models = _read_models(db, run_id)
         return {**dict(row), "models": models}
     finally:
         db.close()
