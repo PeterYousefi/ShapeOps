@@ -535,11 +535,46 @@ async def drill(request: Request) -> DrillResult:
 
 
 @app.post("/api/operations/promote")
-def promote():
-    raise HTTPException(
-        403,
-        "Production administration is disabled. An authenticated, authorized deployment environment is required.",
+def promote(request: Request):
+    auth_header = request.headers.get("Authorization")
+    from backend.release import verify_operator_token, record_release
+    is_valid, operator_name = verify_operator_token(auth_header)
+    if not is_valid:
+        raise HTTPException(
+            403,
+            "Production administration is disabled. An authenticated, authorized deployment environment is required.",
+        )
+    from backend.governance import evaluate_gates, eligible
+    candidate_record = next((r for r in app.state.registry if r.get("stage") == "candidate"), None)
+    if not candidate_record:
+        raise HTTPException(404, "No registered candidate model found for release evaluation")
+
+    macro_f1 = float(candidate_record.get("macro_f1", 0.0))
+    gates = evaluate_gates(macro_f1, True, True, True)
+    is_eligible = eligible(gates, authorized=True)
+    status = "approved" if is_eligible else "rejected"
+    rationale = f"Evaluated candidate {candidate_record['id']} under authorized operator governance"
+
+    release_path = Path(os.getenv("SHAPEOPS_DATA_DIR", ".runtime")) / "releases.sqlite"
+    record_data = record_release(
+        release_path,
+        operator_name,
+        candidate_record["id"],
+        candidate_record["package_id"],
+        gates,
+        status,
+        rationale,
     )
+    if not is_eligible:
+        raise HTTPException(422, detail={"message": "Candidate failed required release gates", "release": record_data})
+    return record_data
+
+
+@app.get("/api/operations/releases")
+def operations_releases(limit: int = Query(20, ge=1, le=100)):
+    from backend.release import list_releases
+    release_path = Path(os.getenv("SHAPEOPS_DATA_DIR", ".runtime")) / "releases.sqlite"
+    return {"origin": "Actual append-only release authorization audit journal", "releases": list_releases(release_path, limit=limit)}
 
 
 if (ROOT / "dist").exists():
