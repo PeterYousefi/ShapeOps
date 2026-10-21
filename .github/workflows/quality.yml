@@ -30,6 +30,8 @@ jobs:
       - run: python -m pytest -q
       - run: npm run build
       - run: npx playwright install --with-deps chromium
+      - name: Prepare actual isolated candidate for history UI checks
+        run: python -m backend.candidate_job --output .runtime/candidate-jobs > /tmp/shapeops-browser-candidate.json
       - name: Start application
         run: |
           uvicorn backend.app:app --port 8000 > /tmp/shapeops-api.log 2>&1 &

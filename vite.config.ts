@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+const apiTarget = process.env.SHAPEOPS_DEV_API_URL || "http://127.0.0.1:8000";
 export default defineConfig({
   plugins: [react()],
   build: {
@@ -14,11 +15,11 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      "/api": "http://127.0.0.1:8000",
-      "/metrics": "http://127.0.0.1:8000",
-      "/docs": "http://127.0.0.1:8000",
-      "/openapi.json": "http://127.0.0.1:8000",
-      "/redoc": "http://127.0.0.1:8000",
+      "/api": apiTarget,
+      "/metrics": apiTarget,
+      "/docs": apiTarget,
+      "/openapi.json": apiTarget,
+      "/redoc": apiTarget,
     },
   },
 });

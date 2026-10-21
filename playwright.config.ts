@@ -5,7 +5,7 @@ export default defineConfig({
   expect: { timeout: 15000 },
   workers: 1,
   use: {
-    baseURL: "http://127.0.0.1:5173",
+    baseURL: process.env.SHAPEOPS_TEST_BASE_URL || "http://127.0.0.1:5173",
     headless: true,
     reducedMotion: "reduce",
     viewport: { width: 1440, height: 1050 },

@@ -103,3 +103,49 @@ export const COLORS: Record<string, string> = {
   Toroidal: "#c28d76",
   Other: "#93a7a0",
 };
+
+export type DriftFeature = {
+  name: string;
+  value: number;
+  reference_mean: number;
+  reference_scale: number;
+  deviation: number;
+};
+export type DriftObservation = {
+  id: string;
+  at: number;
+  source: "sample" | "upload";
+  model: string;
+  reference_id: string;
+  reference_scope: string;
+  reference_parts: number;
+  threshold: number;
+  warning: boolean;
+  ood_score: number;
+  ood: boolean;
+  features: DriftFeature[];
+};
+export type DriftHistory = { origin: string; observations: DriftObservation[] };
+export type CandidateJob = {
+  id: string;
+  started_at: number;
+  finished_at: number | null;
+  status: "running" | "succeeded" | "failed" | "timed_out" | "interrupted";
+  scope: string;
+  candidate: (Registry & { package_id: string; run_id: string }) | null;
+};
+export type CandidateHistory = { origin: string; jobs: CandidateJob[] };
+export type TrainingRun = {
+  id: string;
+  started_at: number;
+  completed_at: number;
+  models: { model_id: string; package_id: string }[];
+};
+export type TrainingHistory = { origin: string; runs: TrainingRun[] };
+export type TrainingFailure = {
+  id: string;
+  started_at: number;
+  failed_at: number;
+  category: "validation" | "storage" | "execution";
+};
+export type FailureHistory = { origin: string; failures: TrainingFailure[] };
