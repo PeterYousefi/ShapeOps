@@ -76,6 +76,11 @@ jobs:
       - uses: helm/kind-action@a1b0e391336a6ee6713a0583f8c6240d70863de3 # v1.12.0
         with: { install_only: true }
       - run: ./scripts/kind-smoke.sh
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: kind-rollback-evidence
+          path: artifacts/kind-rollback/
   terraform:
     runs-on: ubuntu-latest
     timeout-minutes: 15

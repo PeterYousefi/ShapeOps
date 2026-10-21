@@ -77,3 +77,21 @@ kubectl rollout restart deployment/shapeops
 kubectl rollout status deployment/shapeops --timeout=300s
 shapeops_filesystem_smoke
 shapeops_upload_smoke
+# Acceptance: exercise revision failure/rollback only in this disposable cluster.
+[ "$(kubectl config current-context)" = "kind-shapeops" ]
+mkdir -p artifacts/kind-rollback
+kubectl get deployment shapeops -o json > artifacts/kind-rollback/baseline.json
+baseline_revision=$(kubectl get deployment shapeops -o jsonpath='{.metadata.annotations.deployment\.kubernetes\.io/revision}')
+kubectl set env deployment/shapeops SHAPEOPS_DATA_DIR=/proc/shapeops-rollback-fault
+if kubectl rollout status deployment/shapeops --timeout=45s; then
+  echo 'Fault revision unexpectedly became healthy' >&2
+  exit 1
+fi
+kubectl get deployment shapeops -o json > artifacts/kind-rollback/failed.json
+kubectl get pods -l app=shapeops -o json > artifacts/kind-rollback/failed-pods.json
+kubectl rollout undo deployment/shapeops --to-revision="$baseline_revision"
+kubectl rollout status deployment/shapeops --timeout=300s
+kubectl get deployment shapeops -o json > artifacts/kind-rollback/restored.json
+shapeops_filesystem_smoke
+shapeops_upload_smoke
+python3 scripts/rollback_evidence.py artifacts/kind-rollback
