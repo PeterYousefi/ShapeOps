@@ -1,6 +1,7 @@
 """Local append-only completed training journal; no release authority is granted."""
 import hashlib
 import json
+import math
 from pathlib import Path
 import sqlite3
 import time
@@ -25,7 +26,9 @@ def initialize(db: sqlite3.Connection) -> None:
     db.execute("CREATE TABLE IF NOT EXISTS training_runs (id TEXT PRIMARY KEY, started_at REAL NOT NULL, completed_at REAL NOT NULL)")
     db.execute("CREATE TABLE IF NOT EXISTS run_models (run_id TEXT NOT NULL REFERENCES training_runs(id), model_id TEXT NOT NULL, package_id TEXT NOT NULL, manifest TEXT NOT NULL, PRIMARY KEY(run_id,model_id))")
     db.execute("CREATE INDEX IF NOT EXISTS training_runs_order ON training_runs(completed_at DESC,id DESC)")
-    for table in ("training_runs", "run_models"):
+    db.execute("CREATE TABLE IF NOT EXISTS training_failures (id TEXT PRIMARY KEY, started_at REAL NOT NULL, failed_at REAL NOT NULL CHECK(failed_at >= started_at), category TEXT NOT NULL CHECK(category IN ('validation','storage','execution')))")
+    db.execute("CREATE INDEX IF NOT EXISTS training_failures_order ON training_failures(failed_at DESC,id DESC)")
+    for table in ("training_runs", "run_models", "training_failures"):
         for action in ("UPDATE", "DELETE"):
             db.execute(f"CREATE TRIGGER IF NOT EXISTS immutable_{table}_{action.lower()} BEFORE {action} ON {table} BEGIN SELECT RAISE(ABORT,'Training journal is append-only'); END")
 
@@ -107,5 +110,40 @@ def get_run(path: Path, run_id: str) -> dict | None:
             return None
         models = _read_models(db, run_id)
         return {**dict(row), "models": models}
+    finally:
+        db.close()
+
+
+def record_failure(path: Path, started_at: float, category: str) -> str:
+    failed_at = time.time()
+    if (not math.isfinite(started_at) or not 0 <= started_at <= failed_at
+            or category not in {"validation", "storage", "execution"}):
+        raise ValueError("Invalid failed training attempt metadata")
+    identity = uuid.uuid4().hex
+    db = connect(path)
+    try:
+        with db:
+            initialize(db)
+            db.execute("INSERT INTO training_failures VALUES (?,?,?,?)", (identity, started_at, failed_at, category))
+    finally:
+        db.close()
+    return identity
+
+
+def list_failures(path: Path, limit: int = 20) -> list[dict]:
+    if not 1 <= limit <= 100:
+        raise ValueError("History limit must be between one and one hundred")
+    if not path.exists():
+        return []
+    db = connect(path, readonly=True)
+    try:
+        db.execute("BEGIN")
+        # Existing journals predate failure capture; reads never migrate them.
+        if db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='training_failures'").fetchone() is None:
+            return []
+        return [dict(row) for row in db.execute(
+            "SELECT id,started_at,failed_at,category FROM training_failures ORDER BY failed_at DESC,id DESC LIMIT ?",
+            (limit,),
+        )]
     finally:
         db.close()

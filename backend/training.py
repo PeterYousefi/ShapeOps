@@ -1,6 +1,6 @@
 """Reproducible surface-classification baseline on owned procedural solids."""
 
-import hashlib, json, subprocess, platform, os, io, time
+import hashlib, json, subprocess, platform, os, io, time, logging, sqlite3
 from pathlib import Path
 import numpy as np
 import cadquery as cq
@@ -12,7 +12,7 @@ from sklearn.ensemble import (
 from sklearn.metrics import accuracy_score, f1_score, log_loss
 import sklearn
 import joblib
-from backend.registry import record_run
+from backend.registry import record_run, record_failure
 from backend.packages import publish_package
 from backend.governance import evaluate_gates
 from backend.cad import features, LABELS, describe, sample_shape
@@ -21,6 +21,25 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def train():
+    """Persist handled baseline-initialization failures without storing diagnostics."""
+    started_at = time.time()
+    try:
+        return _train()
+    except Exception as error:
+        category = "storage" if isinstance(error, (OSError, sqlite3.Error)) else "validation" if isinstance(error, ValueError) else "execution"
+        try:
+            record_failure(
+                Path(os.environ.get("SHAPEOPS_DATA_DIR", str(ROOT / ".runtime"))) / "registry.sqlite",
+                started_at, category,
+            )
+        except Exception:
+            # A broken/full store cannot durably record its own failure. Preserve
+            # the original exception and never claim that persistence succeeded.
+            logging.getLogger(__name__).error("Failed to persist baseline initialization failure")
+        raise
+
+
+def _train():
     started_at = time.time()
     rng = np.random.default_rng(42)
     x = []

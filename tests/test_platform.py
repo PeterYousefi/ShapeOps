@@ -382,3 +382,24 @@ def test_history_rejects_inconsistent_run_relationships(client):
         invalid['models'].append(deepcopy(invalid['models'][0]))
         with pytest.raises(ValidationError):
             model.model_validate(invalid)
+
+
+def test_failed_training_history_api_is_bounded_typed_and_read_only(client, tmp_path, monkeypatch):
+    import time
+    import backend.app as module
+    from backend.registry import record_failure
+    path = tmp_path / 'failure-history.sqlite'
+    monkeypatch.setattr(module, 'REGISTRY_DB', path)
+    assert client.get('/api/registry/failures').json()['failures'] == []
+    assert not path.exists()
+    identity = record_failure(path, time.time(), 'validation')
+    response = client.get('/api/registry/failures?limit=1')
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload['origin'] == 'Actual handled local baseline initialization failures'
+    assert payload['failures'][0]['id'] == identity
+    assert set(payload['failures'][0]) == {'id', 'started_at', 'failed_at', 'category'}
+    assert client.get('/api/registry/failures?limit=101').status_code == 422
+    assert client.post('/api/registry/failures').status_code == 405
+    schema = client.get('/openapi.json').json()['paths']['/api/registry/failures']['get']['responses']['200']['content']['application/json']['schema']
+    assert schema['$ref'].endswith('/TrainingFailureHistory')
