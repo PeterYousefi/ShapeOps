@@ -24,6 +24,10 @@ def test_real_candidate_job_isolated_from_serving_paths(tmp_path, monkeypatch):
     package = directory / 'runtime/models/packages-v2' / candidate['package_id']
     assert (package / 'estimator.joblib').is_file()
     assert (directory / 'reports/evaluation.json').is_file()
+    from backend.job_history import get_job, list_jobs
+    saved = get_job(tmp_path / 'jobs', result['id'])
+    assert saved.candidate.package_id == candidate['package_id']
+    assert list_jobs(tmp_path / 'jobs')[0].id == result['id']
     assert sorted(path.name for path in active.iterdir()) == ['sentinel']
     assert sentinel.read_text() == 'serving-state-fixture'
 
