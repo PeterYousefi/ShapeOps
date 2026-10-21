@@ -71,3 +71,12 @@ python -m backend.release evaluate \
   --package-id "<sha256-digest>" \
   --rationale "Candidate passed all synthetic holdout gates and container audits"
 ```
+
+## UI Integration
+
+The Operations Center (`/#Operations`) integrates `ReleaseHistory` from `src/EngineeringHistory.tsx` to surface recorded decisions from `GET /api/operations/releases`:
+
+- **Decision Explorer:** Lists recent release events with candidate name, operator identity, timestamp, and status badge (`Approved` / `Rejected`).
+- **Gate Breakdown:** Displays the evaluated status of each release gate (`quality`, `compatibility`, `license`, `security`) with explicit pass/fail badges.
+- **Evidence Export:** Allows operators to export the verified decision record JSON directly from the browser for offline auditing.
+- **Honest Undeployed State:** Preserves the distinction between local authenticated release decisions and unprovisioned Azure cloud deployments.

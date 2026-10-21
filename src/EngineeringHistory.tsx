@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Database, Download, FileBox, RefreshCw } from "lucide-react";
+import { Database, Download, FileBox, RefreshCw, ShieldCheck } from "lucide-react";
 import type {
   CandidateHistory,
   DriftHistory,
   FailureHistory,
+  ReleasesHistory,
   TrainingHistory,
 } from "./types";
 
@@ -497,6 +498,152 @@ export function RegistryHistory({ refreshKey }: { refreshKey: number }) {
       <div className="panel-foot">
         Read-only local history · latest 20 records per category · no production
         release authority
+      </div>
+    </section>
+  );
+}
+
+export function ReleaseHistory({ refreshKey }: { refreshKey: number }) {
+  const remote = useHistory<ReleasesHistory>(
+    "/api/operations/releases?limit=20",
+    refreshKey,
+  );
+  const [selectedId, setSelectedId] = useState("");
+  const releases = remote.data?.releases ?? [];
+  const selected = releases.find((r) => r.id === selectedId) ?? releases[0];
+
+  const download = () => {
+    if (!selected) return;
+    const blob = new Blob([JSON.stringify(selected, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `shapeops-release-${selected.id.slice(0, 16)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <section
+      className="panel engineering-history release-history"
+      aria-label="Release authorization audit journal"
+    >
+      <div className="panel-header">
+        <div className="panel-title">
+          <ShieldCheck size={16} />
+          <h2>Release authorization audit journal</h2>
+          {releases.length > 0 && <span className="count">{releases.length}</span>}
+        </div>
+        <span className="muted">Append-only SQLite audit journal</span>
+      </div>
+
+      {remote.error && (
+        <Notice
+          error={remote.error}
+          stale={!!remote.data}
+          retry={remote.retry}
+        />
+      )}
+
+      {remote.loading && !remote.data ? (
+        <p className="history-loading" role="status">
+          Loading release decisions…
+        </p>
+      ) : releases.length === 0 ? (
+        <Blank title="No release decisions recorded">
+          No candidate promotion decisions have been evaluated yet. Authenticated
+          candidate release decisions evaluated via POST /api/operations/promote
+          or the operator release CLI are committed to this append-only audit
+          journal with timing-safe token authentication and immutable triggers.
+        </Blank>
+      ) : (
+        <div className="history-explorer">
+          <div className="history-list" aria-label="Release decisions">
+            {releases.map((row) => (
+              <button
+                key={row.id}
+                aria-pressed={row.id === selected.id}
+                onClick={() => setSelectedId(row.id)}
+              >
+                <div className="history-list-top">
+                  <span className="mono">{row.candidate_id}</span>
+                  <Status warning={row.status !== "approved"}>
+                    {row.status === "approved" ? "Approved" : "Rejected"}
+                  </Status>
+                </div>
+                <small>
+                  {row.operator} · {date(row.at)}
+                </small>
+              </button>
+            ))}
+          </div>
+
+          <div className="history-detail">
+            <div className="history-detail-header">
+              <div>
+                <Status warning={selected.status !== "approved"}>
+                  {selected.status === "approved"
+                    ? "Decision: Approved"
+                    : "Decision: Rejected"}
+                </Status>
+                <h3>{selected.candidate_id}</h3>
+              </div>
+              <button
+                className="text-button"
+                onClick={download}
+                title="Export verified decision JSON"
+              >
+                <Download size={13} /> Export decision
+              </button>
+            </div>
+
+            <p className="history-rationale">
+              <strong>Rationale:</strong> {selected.rationale}
+            </p>
+
+            <div className="history-gates-section">
+              <h4>Evaluated release gates</h4>
+              <div className="history-gates-grid">
+                {Object.entries(selected.gates).map(([name, passed]) => (
+                  <div
+                    key={name}
+                    className={`history-gate-pill ${passed ? "pass" : "fail"}`}
+                  >
+                    <span className="gate-icon">{passed ? "✓" : "✗"}</span>
+                    <span className="gate-name">
+                      {name.replace(/_/g, " ")}
+                    </span>
+                    <span className="gate-status">
+                      {passed ? "PASS" : "FAIL"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <dl>
+              <dt>Decision ID</dt>
+              <dd>
+                <code>{selected.id}</code>
+              </dd>
+              <dt>Evaluated at</dt>
+              <dd>{date(selected.at)}</dd>
+              <dt>Operator identity</dt>
+              <dd>
+                <code>{selected.operator}</code>
+              </dd>
+              <dt>Package checksum</dt>
+              <dd>
+                <code>{selected.package_id}</code>
+              </dd>
+            </dl>
+          </div>
+        </div>
+      )}
+      <div className="panel-foot">
+        Append-only SQLite audit journal · immutable triggers · timing-safe token authentication
       </div>
     </section>
   );

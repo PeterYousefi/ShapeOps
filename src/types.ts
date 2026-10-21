@@ -149,3 +149,15 @@ export type TrainingFailure = {
   category: "validation" | "storage" | "execution";
 };
 export type FailureHistory = { origin: string; failures: TrainingFailure[] };
+
+export type ReleaseRecord = {
+  id: string;
+  at: number;
+  operator: string;
+  candidate_id: string;
+  package_id: string;
+  gates: Record<string, boolean>;
+  status: "approved" | "rejected";
+  rationale: string;
+};
+export type ReleasesHistory = { origin: string; releases: ReleaseRecord[] };

@@ -122,3 +122,63 @@ test("history has honest empty, loading and unavailable states", async ({
     panel.getByRole("button", { name: "Retry history" }),
   ).toBeVisible();
 });
+
+test("operations displays release authorization audit journal records", async ({
+  page,
+}) => {
+  const mockRelease = {
+    origin: "Actual append-only release authorization audit journal",
+    releases: [
+      {
+        id: "rel_browser_qa_test",
+        at: 1729524000.0,
+        operator: "qa-operator@shapeops.internal",
+        candidate_id: "surface-et-v2",
+        package_id:
+          "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        gates: {
+          macro_f1: true,
+          latency_ms: true,
+          security: true,
+          dataset_hash: true,
+        },
+        status: "approved",
+        rationale: "Automated browser test release evaluation passes all gates",
+      },
+    ],
+  };
+
+  await page.route("**/api/operations/releases?limit=20", (route) =>
+    route.fulfill({ json: mockRelease }),
+  );
+
+  await page.goto("/#Operations");
+  const panel = page.getByRole("region", {
+    name: "Release authorization audit journal",
+  });
+  await expect(panel).toBeVisible();
+  await expect(panel.getByText("Decision: Approved")).toBeVisible();
+  await expect(
+    panel.getByText("qa-operator@shapeops.internal", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    panel.getByText("Automated browser test release evaluation passes all gates"),
+  ).toBeVisible();
+  await expect(panel.getByText("macro f1")).toBeVisible();
+
+  // Test export
+  const downloadPromise = page.waitForEvent("download");
+  await panel.getByRole("button", { name: "Export decision" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe(
+    "shapeops-release-rel_browser_qa_t.json",
+  );
+
+  // Mobile viewport check
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    )
+    .toBeTruthy();
+});

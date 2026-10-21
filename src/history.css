@@ -346,3 +346,69 @@
     margin-top: 8px;
   }
 }
+
+.history-list-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.history-rationale {
+  margin: 14px 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--panel-2);
+  padding: 10px 14px;
+  border-left: 3px solid var(--blue);
+  border-radius: 2px;
+}
+.history-gates-section {
+  margin: 18px 0 14px;
+}
+.history-gates-section h4 {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin: 0 0 10px;
+}
+.history-gates-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+}
+.history-gate-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+}
+.history-gate-pill.pass {
+  border-color: #bee3d5;
+  background: #f0fdf4;
+  color: #14532d;
+}
+.history-gate-pill.fail {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+.history-gate-pill .gate-name {
+  font-weight: 500;
+  text-transform: capitalize;
+  margin: 0 6px;
+}
+.history-gate-pill .gate-icon {
+  font-weight: 700;
+}
+.history-gate-pill .gate-status {
+  font-size: 10px;
+  font-weight: 700;
+}

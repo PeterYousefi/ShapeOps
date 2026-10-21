@@ -279,8 +279,13 @@ Branch feat/authenticated-release-governance added backend/release.py with opera
 POST /api/operations/promote continues returning 403 when unauthenticated, maintaining full backwards compatibility. When presented with a timing-safe verified operator token (SHAPEOPS_OPERATOR_TOKEN), the endpoint evaluates the candidate model against strict release gates via pure evaluate_gates() and eligible(gates, authorized=True).
 Approved and rejected decisions are atomically committed to the immutable releases table protected by SQLite UPDATE/DELETE triggers. Read-only queries via mode=ro and PRAGMA query_only=ON power GET /api/operations/releases and trusted CLI inspection. See docs/release-governance.md.
 
-## Current increment — telemetry storage adapter archival
+## Prior increment — telemetry storage adapter archival
 
-Branch feat/telemetry-storage-archival integrates backend/storage.py into backend/export_telemetry.py via archive_snapshot() and CLI --archive flag.
-Operators can persist retained snapshot archives directly into local or Azure Managed Identity cloud storage under immutable keys (<prefix>/<timestamp>_<sha16>.json).
-Validated retention bounds, exact JSON serialization, byte limits, and content types are enforced. See docs/telemetry-export.md.
+PR #42 merged as 86d72c9 at 953bbae/run39669459349: all four gates green, 345 Linux tests/13 browser checks. Main verified at 101 commits; clean tree/no open PRs before feat/operations-release-ui.
+Branch feat/telemetry-storage-archival integrated backend/storage.py into backend/export_telemetry.py via archive_snapshot() and CLI --archive flag, persisting retained snapshot archives directly into local or Azure Managed Identity cloud storage under immutable keys (<prefix>/<timestamp>_<sha16>.json). Validated retention bounds, exact JSON serialization, byte limits, and content types are enforced. See docs/telemetry-export.md.
+
+## Current increment — Operations Center release governance UI
+
+Branch feat/operations-release-ui integrates the append-only SQLite release audit journal (GET /api/operations/releases) into the Operations screen via ReleaseHistory in src/EngineeringHistory.tsx.
+Operators can view evaluated release decisions (Approved/Rejected), operator identities, timestamps, detailed release gate breakdowns (quality, compatibility, license, security) with pass/fail pills, candidate rationales, and export verifiable decision JSON records directly from the browser.
+Clean empty/loading/error states are implemented, with zero axe WCAG violations and verified mobile responsiveness. See docs/release-governance.md.
