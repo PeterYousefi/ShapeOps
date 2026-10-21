@@ -24,3 +24,5 @@ History validates UUID-format run identities, finite chronological timestamps, o
 
 
 TrainingFailureHistory at GET /api/registry/failures documents actual handled baseline initialization failures, with bounded query limits and chronological finite timestamps. Only a closed category enum is exposed; no raw diagnostic details or fabricated past records. Failed attempts remain separate from successful run/model snapshots. POST is unsupported. Capture limits and possible completed-snapshot/report-failure overlap are documented in models.md.
+
+CandidateJobHistory and CandidateJob document read-only saved local job discovery at /api/registry/candidate-jobs and its ID detail route. State-dependent candidate/finish requirements and safe scope are validated. Discovery and file reads are bounded independently of query limits; corrupt files are rejected, not repaired. Saved running metadata is not a liveness assertion. No job-creation POST or promotion authority is exposed.

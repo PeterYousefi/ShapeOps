@@ -259,3 +259,30 @@ class TrainingFailure(OutputModel):
 class TrainingFailureHistory(OutputModel):
     origin: Literal["Actual handled local baseline initialization failures"]
     failures: Annotated[list[TrainingFailure], Field(max_length=100)]
+
+
+class CandidateJob(OutputModel):
+    id: RunIdentity
+    started_at: Nonnegative
+    finished_at: Nonnegative | None = None
+    status: Literal['running', 'succeeded', 'failed', 'timed_out', 'interrupted']
+    scope: Literal['Isolated local procedural baseline candidate. No serving or production mutation.']
+    candidate: RegisteredModel | None = None
+
+    @model_validator(mode='after')
+    def consistent_state(self) -> Self:
+        if self.status == 'running':
+            if self.finished_at is not None or self.candidate is not None:
+                raise ValueError('Running job cannot have a terminal result')
+        elif self.finished_at is None or self.finished_at < self.started_at:
+            raise ValueError('Terminal job requires chronological finish time')
+        if (self.status == 'succeeded') != (self.candidate is not None):
+            raise ValueError('Only a successful job may contain a candidate')
+        if self.candidate is not None and self.candidate.stage != 'candidate':
+            raise ValueError('Job result must reference a candidate model')
+        return self
+
+
+class CandidateJobHistory(OutputModel):
+    origin: Literal['Actual isolated local candidate jobs']
+    jobs: Annotated[list[CandidateJob], Field(max_length=100)]

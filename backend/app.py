@@ -16,7 +16,8 @@ from backend.worker_limits import MAX_RESULT_BYTES
 from backend.retention import initialize_retention, prune_records
 from backend.contracts import Geometry, validate_geometry
 from backend.registry import list_runs, get_run, list_failures
-from backend.responses import InferenceResult, TelemetryResponse, OperationsResponse, DrillResult, RegisteredModel, TrainingHistory, TrainingRunDetail, TrainingFailureHistory
+from backend.job_history import list_jobs, get_job, HistoryCapacityError
+from backend.responses import InferenceResult, TelemetryResponse, OperationsResponse, DrillResult, RegisteredModel, TrainingHistory, TrainingRunDetail, TrainingFailureHistory, CandidateJob, CandidateJobHistory
 
 logger = logging.getLogger("shapeops")
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -26,6 +27,7 @@ DB = (
 )
 DB.parent.mkdir(exist_ok=True)
 REGISTRY_DB = DB.parent / "registry.sqlite"
+CANDIDATE_JOBS = Path(os.environ.get("SHAPEOPS_CANDIDATE_JOB_DIR", str(DB.parent / "candidate-jobs")))
 
 
 def connection():
@@ -390,6 +392,23 @@ def training_runs(limit: int = Query(20, ge=1, le=100)):
 @app.get("/api/registry/failures", response_model=TrainingFailureHistory)
 def training_failures(limit: int = Query(20, ge=1, le=100)):
     return {"origin": "Actual handled local baseline initialization failures", "failures": list_failures(REGISTRY_DB, limit)}
+
+
+@app.get("/api/registry/candidate-jobs", response_model=CandidateJobHistory)
+def candidate_jobs(limit: int = Query(20, ge=1, le=100)):
+    try:
+        jobs = list_jobs(CANDIDATE_JOBS, limit)
+    except HistoryCapacityError:
+        raise HTTPException(503, "Candidate job history requires archival before discovery.") from None
+    return {"origin": "Actual isolated local candidate jobs", "jobs": jobs}
+
+
+@app.get("/api/registry/candidate-jobs/{identity}", response_model=CandidateJob)
+def candidate_job(identity: str):
+    result = get_job(CANDIDATE_JOBS, identity)
+    if result is None:
+        raise HTTPException(404, "Unknown candidate job")
+    return result
 
 
 @app.get("/api/registry/runs/{run_id}", response_model=TrainingRunDetail)

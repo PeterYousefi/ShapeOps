@@ -403,3 +403,42 @@ def test_failed_training_history_api_is_bounded_typed_and_read_only(client, tmp_
     assert client.post('/api/registry/failures').status_code == 405
     schema = client.get('/openapi.json').json()['paths']['/api/registry/failures']['get']['responses']['200']['content']['application/json']['schema']
     assert schema['$ref'].endswith('/TrainingFailureHistory')
+
+
+def test_candidate_job_history_api_is_read_only_and_survives_reopen(client, tmp_path, monkeypatch):
+    import json
+    import backend.app as module
+    root = tmp_path / 'jobs'
+    monkeypatch.setattr(module, 'CANDIDATE_JOBS', root)
+    assert client.get('/api/registry/candidate-jobs').json()['jobs'] == []
+    assert not root.exists()
+    identity = 'f' * 32
+    directory = root / identity
+    directory.mkdir(parents=True)
+    fixture = {'id': identity, 'started_at': 1.0, 'finished_at': 2.0, 'status': 'timed_out',
+               'scope': 'Isolated local procedural baseline candidate. No serving or production mutation.'}
+    (directory / 'job.json').write_text(json.dumps(fixture))
+    history = client.get('/api/registry/candidate-jobs?limit=1').json()
+    assert history['origin'] == 'Actual isolated local candidate jobs'
+    assert history['jobs'][0]['status'] == 'timed_out'
+    detail = client.get(f'/api/registry/candidate-jobs/{identity}')
+    assert detail.status_code == 200 and detail.json()['id'] == identity
+    assert client.get('/api/registry/candidate-jobs/missing').status_code == 404
+    assert client.get('/api/registry/candidate-jobs?limit=101').status_code == 422
+    assert client.post('/api/registry/candidate-jobs').status_code == 405
+    assert (directory / 'job.json').read_text() == json.dumps(fixture)
+    schema = client.get('/openapi.json').json()['paths']
+    for path, model in [('/api/registry/candidate-jobs', 'CandidateJobHistory'), ('/api/registry/candidate-jobs/{identity}', 'CandidateJob')]:
+        assert schema[path]['get']['responses']['200']['content']['application/json']['schema']['$ref'].endswith('/' + model)
+
+
+def test_candidate_job_discovery_capacity_returns_actionable_unavailable(client, tmp_path, monkeypatch):
+    import backend.app as module
+    import backend.job_history as history
+    monkeypatch.setattr(module, 'CANDIDATE_JOBS', tmp_path)
+    monkeypatch.setattr(history, 'MAX_DISCOVERED_JOBS', 1)
+    (tmp_path / 'first').touch()
+    (tmp_path / 'second').touch()
+    response = client.get('/api/registry/candidate-jobs')
+    assert response.status_code == 503
+    assert 'archival' in response.json()['detail']
