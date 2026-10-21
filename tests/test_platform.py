@@ -454,3 +454,38 @@ def test_oversized_sample_json_records_real_source_without_inference(client):
     latest = telemetry['requests'][0]
     assert latest['source'] == 'sample' and latest['faces'] == 0 and latest['error'] == 'validation'
     assert client.get('/api/health').status_code == 200
+
+
+def test_actual_geometry_drift_evidence_persists_and_excludes_failed_requests(client):
+    import json
+    from backend.app import connection
+    result = client.post('/api/inference/sample', json={'sample': 'flange'}).json()
+    assert 'trace_id' in result
+    history = client.get('/api/drift?limit=1')
+    assert history.status_code == 200
+    payload = history.json()
+    assert payload['origin'] == 'Actual retained local inference geometry screening'
+    observed = payload['observations'][0]
+    assert observed['id'] == result['trace_id'] and observed['source'] == 'sample'
+    features = {feature['name']: feature for feature in observed['features']}
+    assert features['Face count']['value'] == result['face_count']
+    assert features['Largest extent']['value'] == max(result['bounds'])
+    assert observed['reference_parts'] == 5 and len(observed['reference_id']) == 64
+    assert observed['ood'] == result['ood'] and observed['ood_score'] == result['ood_score']
+    with connection() as db:
+        saved = json.loads(db.execute('SELECT result FROM drift_observations WHERE id=?', (result['trace_id'],)).fetchone()[0])
+    assert saved == observed
+    from backend.app import record
+    from backend.responses import DriftObservation
+    import uuid
+    mismatched_trace = uuid.uuid4().hex
+    with pytest.raises(ValueError, match='belong'):
+        record(mismatched_trace, 'sample', result['model'], True, 0, drift=DriftObservation.model_validate(saved))
+    with connection() as db:
+        assert db.execute('SELECT id FROM requests WHERE id=?', (mismatched_trace,)).fetchone() is None
+    assert client.post('/api/inference/sample', json={'sample': 'unknown-fixture'}).status_code == 404
+    assert client.get('/api/drift?limit=1').json()['observations'][0]['id'] == result['trace_id']
+    assert client.get('/api/drift?limit=101').status_code == 422
+    assert client.post('/api/drift').status_code == 405
+    schema = client.get('/openapi.json').json()['paths']['/api/drift']['get']['responses']['200']['content']['application/json']['schema']
+    assert schema['$ref'].endswith('/DriftHistory')

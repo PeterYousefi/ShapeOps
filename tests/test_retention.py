@@ -66,3 +66,15 @@ def test_startup_reopens_prunes_and_indexes_legacy_database(db):
         assert reopened.execute("SELECT COUNT(*) FROM requests").fetchone()[0] == 0
         for table in ("requests", "drills"):
             assert f"{table}_retention" in [row[1] for row in reopened.execute(f"PRAGMA index_list({table})")]
+
+
+def test_drift_rows_follow_request_retention_and_do_not_backfill(db):
+    initialize_retention(db)
+    assert db.execute('SELECT count(*) FROM drift_observations').fetchone()[0] == 0
+    now = 10000000.0
+    db.execute('INSERT INTO requests VALUES (?,?,?)', ('kept', now, 'fixture'))
+    db.execute('INSERT INTO requests VALUES (?,?,?)', ('expired', now - REQUEST_MAX_AGE_SECONDS - 1, 'fixture'))
+    for identity in ('kept', 'expired', 'orphan'):
+        db.execute('INSERT INTO drift_observations VALUES (?,?,?)', (identity, now, 'explicit retention fixture'))
+    prune_records(db, now=now)
+    assert db.execute('SELECT id FROM drift_observations').fetchall() == [('kept',)]

@@ -22,8 +22,13 @@ def prune_records(db: sqlite3.Connection, *, now: float | None = None) -> None:
             (limit,),
         )
 
+    if db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='drift_observations'").fetchone():
+        db.execute("DELETE FROM drift_observations WHERE NOT EXISTS (SELECT 1 FROM requests WHERE requests.id=drift_observations.id)")
+
 
 def initialize_retention(db: sqlite3.Connection) -> None:
+    db.execute("CREATE TABLE IF NOT EXISTS drift_observations (id TEXT PRIMARY KEY, at REAL NOT NULL, result TEXT NOT NULL)")
+    db.execute("CREATE INDEX IF NOT EXISTS drift_retention ON drift_observations(at DESC,id DESC)")
     db.execute("CREATE INDEX IF NOT EXISTS requests_retention ON requests(at DESC, id DESC)")
     db.execute("CREATE INDEX IF NOT EXISTS drills_retention ON drills(at DESC, id DESC)")
     prune_records(db)

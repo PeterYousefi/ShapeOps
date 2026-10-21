@@ -8,7 +8,7 @@ import cadquery as cq
 from fastapi import FastAPI, File, UploadFile, HTTPException, Request, Query
 from fastapi.responses import Response, FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 from backend.cad import SAMPLES, sample_shape, describe
 from backend.training import train, ROOT
 from backend.security import AdmissionMiddleware, BodyLimitMiddleware, RateLimitMiddleware, run_worker
@@ -16,8 +16,9 @@ from backend.worker_limits import MAX_RESULT_BYTES
 from backend.retention import initialize_retention, prune_records
 from backend.contracts import Geometry, validate_geometry
 from backend.registry import list_runs, get_run, list_failures
+from backend.drift import observation as drift_observation
 from backend.job_history import list_jobs, get_job, HistoryCapacityError
-from backend.responses import InferenceResult, TelemetryResponse, OperationsResponse, DrillResult, RegisteredModel, TrainingHistory, TrainingRunDetail, TrainingFailureHistory, CandidateJob, CandidateJobHistory
+from backend.responses import InferenceResult, TelemetryResponse, OperationsResponse, DrillResult, RegisteredModel, TrainingHistory, TrainingRunDetail, TrainingFailureHistory, CandidateJob, CandidateJobHistory, DriftHistory, DriftObservation
 
 logger = logging.getLogger("shapeops")
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -102,6 +103,7 @@ def record(
     confidence=0,
     ood=0,
     error="",
+    drift=None,
 ):
     with connection() as db:
         db.execute(
@@ -121,6 +123,10 @@ def record(
                 error,
             ),
         )
+        if drift is not None:
+            if not success or drift.id != trace or drift.source != source or drift.model != model:
+                raise ValueError('Drift evidence must belong to the successful request')
+            db.execute("INSERT INTO drift_observations VALUES (?,?,?)", (drift.id, drift.at, drift.model_dump_json()))
         prune_records(db)
     logger.info(
         json.dumps(
@@ -212,7 +218,8 @@ def infer(geometry, model, compare, trace, name, source, started, parse_ms) -> I
 
     try:
         result = InferenceResult.model_validate(payload)
-    except ValidationError:
+        screening = drift_observation(result, app.state.samples)
+    except ValueError:
         record(trace, source, model, False, total_ms, parse_ms, execution_ms, error="internal")
         raise RuntimeError("Inference response contract failed") from None
     record(
@@ -226,6 +233,7 @@ def infer(geometry, model, compare, trace, name, source, started, parse_ms) -> I
         geometry["face_count"],
         confidence,
         ood,
+        drift=screening,
     )
     return result
 
@@ -418,6 +426,15 @@ def training_run(run_id: str):
     if result is None:
         raise HTTPException(404, "Unknown training run")
     return result
+
+
+@app.get("/api/drift", response_model=DriftHistory)
+def drift_history(limit: int = Query(20, ge=1, le=100)):
+    with connection() as db:
+        prune_records(db)
+        observations = [DriftObservation.model_validate_json(row[0]) for row in db.execute(
+            "SELECT result FROM drift_observations ORDER BY at DESC,id DESC LIMIT ?", (limit,))]
+    return DriftHistory(origin='Actual retained local inference geometry screening', observations=observations)
 
 
 @app.get("/api/telemetry", response_model=TelemetryResponse)
