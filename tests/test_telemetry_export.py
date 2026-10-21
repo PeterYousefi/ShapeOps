@@ -6,8 +6,9 @@ import time
 
 import pytest
 
-from backend.export_telemetry import export, snapshot
+from backend.export_telemetry import archive_snapshot, export, snapshot
 from backend.retention import REQUEST_MAX_AGE_SECONDS
+from backend.storage import LocalStorageAdapter
 
 
 @pytest.fixture
@@ -182,3 +183,91 @@ def test_publication_failure_cleans_staging_and_preserves_source(database, tmp_p
         export(database, tmp_path / 'out.json')
     assert set(tmp_path.iterdir()) == before
     assert database.read_bytes() == original
+
+
+def test_archive_snapshot_local_adapter(database, tmp_path):
+    now = 1234567.0
+    insert(database, at=now)
+    value = screening()
+    save_screening(database, value)
+    adapter = LocalStorageAdapter(root=tmp_path)
+    result = archive_snapshot(database, adapter=adapter, now=now)
+    assert result['records'] == 1
+    assert result['key'] == f"telemetry/snapshots/1234567_{result['sha256'][:16]}.json"
+    assert adapter.exists(result['key'])
+    data = json.loads(adapter.get_bytes(result['key']))
+    assert data['records'][0]['screening'] == value
+    target = tmp_path / result['key']
+    assert target.stat().st_mode & 0o777 == 0o600
+
+
+def test_archive_snapshot_custom_prefix(database, tmp_path):
+    now = 100.0
+    insert(database, at=now)
+    adapter = LocalStorageAdapter(root=tmp_path)
+    result = archive_snapshot(database, adapter=adapter, prefix="/nested/archive/", now=now)
+    assert result['key'] == f"nested/archive/100_{result['sha256'][:16]}.json"
+    assert adapter.exists(result['key'])
+
+
+def test_archive_snapshot_azure_mock(database):
+    now = 200.0
+    insert(database, at=now)
+    uploaded = {}
+
+    class MockAdapter:
+        def put_bytes(self, key, data, content_type=None):
+            uploaded['key'] = key
+            uploaded['data'] = data
+            uploaded['content_type'] = content_type
+
+    adapter = MockAdapter()
+    result = archive_snapshot(database, adapter=adapter, now=now)  # type: ignore
+    assert uploaded['key'] == f"telemetry/snapshots/200_{result['sha256'][:16]}.json"
+    assert uploaded['content_type'] == 'application/json'
+    assert result['sha256'] == hashlib.sha256(uploaded['data']).hexdigest()
+
+
+def test_archive_snapshot_default_factory(database, tmp_path, monkeypatch):
+    now = 300.0
+    insert(database, at=now)
+    monkeypatch.setenv("SHAPEOPS_STORAGE_TYPE", "local")
+    monkeypatch.setenv("SHAPEOPS_DATA_DIR", str(tmp_path))
+    result = archive_snapshot(database, now=now)
+    assert (tmp_path / "storage" / result['key']).exists()
+
+
+def test_archive_snapshot_oversized_budget(database, tmp_path, monkeypatch):
+    insert(database)
+    adapter = LocalStorageAdapter(root=tmp_path)
+    monkeypatch.setattr('backend.export_telemetry.MAX_EXPORT_BYTES', 1)
+    with pytest.raises(ValueError, match='budget'):
+        archive_snapshot(database, adapter=adapter)
+
+
+def test_cli_export_and_archive(database, tmp_path, monkeypatch, capsys):
+    import sys
+
+    from backend.export_telemetry import main
+
+    insert(database)
+    out_file = tmp_path / "cli_out.json"
+
+    # Test standard --output
+    monkeypatch.setattr(sys, "argv", ["export_telemetry", "--database", str(database), "--output", str(out_file)])
+    main()
+    captured = capsys.readouterr()
+    res = json.loads(captured.out)
+    assert res['records'] == 1
+    assert out_file.exists()
+
+    # Test --archive
+    monkeypatch.setenv("SHAPEOPS_STORAGE_TYPE", "local")
+    monkeypatch.setenv("SHAPEOPS_DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(sys, "argv", ["export_telemetry", "--database", str(database), "--archive", "--prefix", "telemetry/cli"])
+    main()
+    captured = capsys.readouterr()
+    res2 = json.loads(captured.out)
+    assert res2['key'].startswith("telemetry/cli/")
+    assert (tmp_path / "storage" / res2['key']).exists()
+

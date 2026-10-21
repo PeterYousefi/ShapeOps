@@ -4,14 +4,18 @@ import hashlib
 import json
 import math
 import os
-from pathlib import Path
 import sqlite3
 import stat
 import tempfile
 import time
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 from backend.responses import DriftObservation, RequestRecord
 from backend.retention import REQUEST_MAX_AGE_SECONDS, REQUEST_MAX_ROWS
+
+if TYPE_CHECKING:
+    from backend.storage import StorageAdapter
 
 MAX_EXPORT_BYTES = 8 * 1024 * 1024
 MAX_DRIFT_BYTES = 16 * 1024
@@ -94,13 +98,46 @@ def export(database: Path, output: Path) -> dict:
     return {'sha256': hashlib.sha256(payload).hexdigest(), 'bytes': len(payload), 'records': len(value['records'])}
 
 
+def archive_snapshot(
+    database: Path,
+    adapter: "StorageAdapter | None" = None,
+    *,
+    prefix: str = "telemetry/snapshots",
+    now: float | None = None,
+) -> dict:
+    if adapter is None:
+        from backend.storage import get_storage_adapter
+        adapter = get_storage_adapter()
+    value = snapshot(database, now=now)
+    payload = json.dumps(value, allow_nan=False, sort_keys=True, separators=(',', ':')).encode()
+    if len(payload) > MAX_EXPORT_BYTES:
+        raise ValueError('Export exceeds total byte budget')
+    digest = hashlib.sha256(payload).hexdigest()
+    captured_at = value['captured_at']
+    clean_prefix = prefix.strip('/')
+    key = f"{clean_prefix}/{int(captured_at)}_{digest[:16]}.json" if clean_prefix else f"{int(captured_at)}_{digest[:16]}.json"
+    adapter.put_bytes(key, payload, content_type="application/json")
+    return {
+        'key': key,
+        'sha256': digest,
+        'bytes': len(payload),
+        'records': len(value['records']),
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--database', type=Path, required=True)
-    parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--database', type=Path, required=True, help='SQLite telemetry database')
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--output', type=Path, help='Local target path for export')
+    group.add_argument('--archive', action='store_true', help='Archive to configured storage adapter')
+    parser.add_argument('--prefix', type=str, default='telemetry/snapshots', help='Storage prefix for archive')
     args = parser.parse_args()
     try:
-        result = export(args.database, args.output)
+        if args.archive:
+            result = archive_snapshot(args.database, prefix=args.prefix)
+        else:
+            result = export(args.database, args.output)
     except (OSError, sqlite3.Error, ValueError):
         parser.exit(1, 'Telemetry export failed; source and existing output were not modified.\n')
     print(json.dumps(result))
