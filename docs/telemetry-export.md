@@ -16,4 +16,23 @@ Saved request values and screening contracts are validated. Mismatched identity/
 
 Publication uses a same-directory temporary file with mode 0600, flush/fsync, and an atomic no-overwrite hard link. Existing files, symlinks and earlier evidence are preserved. Temporary files are cleaned on handled failures; abrupt host/process failure can leave a private staging file. The output filesystem must support hard links. File data is synchronized, but directory durability across power loss is not guaranteed. CLI stdout reports the actual SHA-256, byte count and exported record count; it does not print the records or filesystem paths on failure.
 
-This is an explicit operator export, not automatic archival, signed evidence, encryption, cloud durability, secure deletion, cross-system restore or a production usage assertion. Copy/retention/encryption policy and managed-identity cloud transport remain separate work. Do not commit exported telemetry to the public repository. No public API, privileged action or deployment is introduced.
+This is an explicit operator export, not automatic background archival, signed evidence, client-side encryption, or a production usage assertion. Do not commit exported telemetry to the public repository. No public API, privileged action, or deployment is introduced.
+
+## Storage adapter archival
+
+In addition to writing to an explicit local output file, operators can archive snapshots directly to the configured storage adapter (such as POSIX local storage or Azure Blob Storage via Managed Identity):
+
+```sh
+# Archive snapshot to configured adapter with default prefix telemetry/snapshots/
+.venv/bin/python -m backend.export_telemetry \
+  --database .runtime/telemetry.sqlite \
+  --archive
+
+# Archive snapshot with custom prefix
+.venv/bin/python -m backend.export_telemetry \
+  --database .runtime/telemetry.sqlite \
+  --archive \
+  --prefix telemetry/audit-runs
+```
+
+When `--archive` is invoked, `archive_snapshot()` validates and formats the retained snapshot, creates an immutable key format (`<prefix>/<timestamp>_<sha16>.json`), and persists it through `backend.storage.get_storage_adapter()`. The resulting key, SHA-256 digest, byte count, and record count are reported on stdout.

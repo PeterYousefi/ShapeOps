@@ -272,8 +272,15 @@ Branch feat/durable-storage-adapters added backend/storage.py with a typed Stora
 LocalStorageAdapter provides atomic staging, 0600 file permissions, path traversal sanitization (blocking null bytes, absolute paths, and escaping references), bounded reads, and directory prefix listing.
 AzureBlobStorageAdapter provides a production cloud implementation using Azure Managed Identity (DefaultAzureCredential) with lazy dependency loading, ensuring local execution and tests require zero Azure packages or credentials. Factory get_storage_adapter() configures local vs. Azure adapters via environment variables. See docs/storage-architecture.md.
 
-## Current increment — authenticated operator release governance
+## Prior increment — authenticated operator release governance
 
-Branch feat/authenticated-release-governance adds backend/release.py with operator bearer token authentication and an append-only SQLite release audit journal (releases.sqlite).
+PR #41 merged as 7a63655 at 7fb0cb9/run39637841120: all four gates green, 339 Linux tests/13 browser checks. Main verified at 99 commits; clean tree/no open PRs before feat/telemetry-storage-archival.
+Branch feat/authenticated-release-governance added backend/release.py with operator bearer token authentication and an append-only SQLite release audit journal (releases.sqlite).
 POST /api/operations/promote continues returning 403 when unauthenticated, maintaining full backwards compatibility. When presented with a timing-safe verified operator token (SHAPEOPS_OPERATOR_TOKEN), the endpoint evaluates the candidate model against strict release gates via pure evaluate_gates() and eligible(gates, authorized=True).
 Approved and rejected decisions are atomically committed to the immutable releases table protected by SQLite UPDATE/DELETE triggers. Read-only queries via mode=ro and PRAGMA query_only=ON power GET /api/operations/releases and trusted CLI inspection. See docs/release-governance.md.
+
+## Current increment — telemetry storage adapter archival
+
+Branch feat/telemetry-storage-archival integrates backend/storage.py into backend/export_telemetry.py via archive_snapshot() and CLI --archive flag.
+Operators can persist retained snapshot archives directly into local or Azure Managed Identity cloud storage under immutable keys (<prefix>/<timestamp>_<sha16>.json).
+Validated retention bounds, exact JSON serialization, byte limits, and content types are enforced. See docs/telemetry-export.md.
