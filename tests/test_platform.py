@@ -442,3 +442,15 @@ def test_candidate_job_discovery_capacity_returns_actionable_unavailable(client,
     response = client.get('/api/registry/candidate-jobs')
     assert response.status_code == 503
     assert 'archival' in response.json()['detail']
+
+
+def test_oversized_sample_json_records_real_source_without_inference(client):
+    from backend.security import MAX_JSON_BYTES
+    before = client.get('/api/telemetry').json()['failed']
+    response = client.post('/api/inference/sample', content=b'x' * (MAX_JSON_BYTES + 1), headers={'Content-Type': 'application/json'})
+    assert response.status_code == 413 and '64 KiB' in response.json()['detail']
+    telemetry = client.get('/api/telemetry').json()
+    assert telemetry['failed'] == before + 1
+    latest = telemetry['requests'][0]
+    assert latest['source'] == 'sample' and latest['faces'] == 0 and latest['error'] == 'validation'
+    assert client.get('/api/health').status_code == 200

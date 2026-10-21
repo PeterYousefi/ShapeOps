@@ -146,7 +146,7 @@ def test_non_upload_routes_keep_their_existing_receive_behavior():
             await asyncio.sleep(.02)
             return {'type': 'http.request', 'body': b'{}'}
         app = BodyLimitMiddleware(downstream, body_timeout=.001)
-        await app(scope('/api/inference/sample'), receive, None)
+        await app(scope('/api/health'), receive, None)
     asyncio.run(scenario())
 
 

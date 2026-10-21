@@ -9,6 +9,7 @@ from collections.abc import Callable
 from fastapi import HTTPException
 from starlette.responses import JSONResponse
 
+MAX_JSON_BYTES = 64 * 1024
 MAX_BODY_BYTES = 10 * 1024 * 1024 + 64 * 1024  # bounded multipart envelope
 
 
@@ -21,9 +22,16 @@ class BodyLimitMiddleware:
         self.on_reject = on_reject
 
     async def __call__(self, scope, receive, send):
-        if scope["type"] != "http" or scope["path"] != "/api/inference/upload":
+        upload = scope.get("path") == "/api/inference/upload"
+        sample = scope.get("path") == "/api/inference/sample" and scope.get("method") == "POST"
+        if scope["type"] != "http" or not (upload or sample):
             await self.app(scope, receive, send)
             return
+        limit = MAX_BODY_BYTES if upload else MAX_JSON_BYTES
+        size_detail = ("Upload body exceeds the 10 MB file limit and multipart allowance." if upload
+                       else "Sample inference JSON body exceeds the 64 KiB limit.")
+        timeout_detail = ("Upload body deadline exceeded. Retry the upload." if upload
+                          else "Sample inference body deadline exceeded. Retry the request.")
         headers = dict(scope.get("headers", []))
         rejected = False
 
@@ -36,12 +44,12 @@ class BodyLimitMiddleware:
         try:
             declared = int(headers.get(b"content-length", b"0"))
         except ValueError:
-            declared = MAX_BODY_BYTES + 1
-        if declared > MAX_BODY_BYTES or declared < 0:
+            declared = limit + 1
+        if declared > limit or declared < 0:
             reject()
             await JSONResponse(
                 {
-                    "detail": "Upload body exceeds the 10 MB file limit and multipart allowance."
+                    "detail": size_detail
                 },
                 status_code=413,
             )(scope, receive, send)
@@ -60,14 +68,14 @@ class BodyLimitMiddleware:
             except TimeoutError:
                 reject()
                 # The pinned multipart parser closes spools on stream exceptions.
-                raise HTTPException(408, "Upload body deadline exceeded. Retry the upload.") from None
+                raise HTTPException(408, timeout_detail) from None
             if message["type"] == "http.request":
                 received += len(message.get("body", b""))
-                if received > MAX_BODY_BYTES:
+                if received > limit:
                     reject()
                     raise HTTPException(
                         413,
-                        "Upload body exceeds the 10 MB file limit and multipart allowance.",
+                        size_detail,
                     )
             return message
 
