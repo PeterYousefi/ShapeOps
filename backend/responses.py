@@ -286,3 +286,45 @@ class CandidateJob(OutputModel):
 class CandidateJobHistory(OutputModel):
     origin: Literal['Actual isolated local candidate jobs']
     jobs: Annotated[list[CandidateJob], Field(max_length=100)]
+
+
+class DriftFeature(OutputModel):
+    name: str
+    value: Nonnegative
+    reference_mean: Nonnegative
+    reference_scale: Annotated[float, Field(gt=0)]
+    deviation: Nonnegative
+
+    @model_validator(mode='after')
+    def consistent_deviation(self) -> Self:
+        if not math.isclose(self.deviation, abs(self.value - self.reference_mean) / self.reference_scale, abs_tol=1e-8):
+            raise ValueError('Drift feature deviation does not match reference')
+        return self
+
+
+class DriftObservation(OutputModel):
+    id: RunIdentity
+    at: Nonnegative
+    source: Literal['sample', 'upload']
+    model: str
+    reference_id: Digest
+    reference_scope: Literal['Owned procedural sample geometries; screening only']
+    reference_parts: Annotated[int, Field(ge=1, le=100)]
+    threshold: Annotated[float, Field(ge=3, le=3)]
+    warning: bool
+    ood_score: float
+    ood: bool
+    features: Annotated[list[DriftFeature], Field(min_length=1, max_length=20)]
+
+    @model_validator(mode='after')
+    def consistent_warning(self) -> Self:
+        if (len({feature.name for feature in self.features}) != len(self.features)
+                or self.warning != any(feature.deviation >= self.threshold for feature in self.features)
+                or self.ood != (self.ood_score > 0)):
+            raise ValueError('Drift observation summary is inconsistent')
+        return self
+
+
+class DriftHistory(OutputModel):
+    origin: Literal['Actual retained local inference geometry screening']
+    observations: Annotated[list[DriftObservation], Field(max_length=100)]
