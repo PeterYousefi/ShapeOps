@@ -3,7 +3,7 @@ import json
 import math
 from pathlib import Path
 import time
-from urllib.error import URLError
+from http.client import HTTPException
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
@@ -23,7 +23,7 @@ def wait_for(function, seconds: int = 120):
     while True:
         try:
             return function()
-        except (URLError, ValueError, KeyError, AssertionError):
+        except (OSError, HTTPException, ValueError, KeyError, AssertionError):
             if time.monotonic() >= deadline:
                 raise
             time.sleep(2)

@@ -41,3 +41,26 @@ def test_dashboard_probe_requires_complete_provisioned_panel_coverage():
         mutate(invalid)
         with pytest.raises(ValueError):
             validate_dashboard(invalid, spec)
+
+
+def test_bounded_startup_wait_retries_socket_resets_and_http_disconnects(monkeypatch):
+    import scripts.monitoring_probe as probe
+    from http.client import RemoteDisconnected
+    outcomes = iter([ConnectionResetError('startup'), RemoteDisconnected('startup'), {'ready': True}])
+    monkeypatch.setattr(probe.time, 'sleep', lambda _: None)
+    def startup():
+        outcome = next(outcomes)
+        if isinstance(outcome, Exception):
+            raise outcome
+        return outcome
+    assert probe.wait_for(startup) == {'ready': True}
+
+
+def test_startup_wait_still_fails_when_deadline_expires(monkeypatch):
+    import scripts.monitoring_probe as probe
+    times = iter([0, 2])
+    monkeypatch.setattr(probe.time, 'monotonic', lambda: next(times))
+    def unavailable():
+        raise ConnectionResetError('unavailable fixture')
+    with pytest.raises(ConnectionResetError):
+        probe.wait_for(unavailable, seconds=1)
