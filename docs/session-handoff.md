@@ -265,8 +265,15 @@ Branch feat/window-drift-analysis added python -m backend.drift_report for trust
 The tool reads an isolated read-only SQLite transaction from drift_observations, compares observed feature distributions against sample baseline references across all ten geometry features, and evaluates standardized mean shifts plus non-parametric two-sample Kolmogorov-Smirnov distance statistics (D_KS in [0, 1]).
 Strict Pydantic contracts (FeatureDistribution, WindowDriftReport) enforce finite/nonnegative CAD summaries, exact feature names, quantile monotonicity, source counts and alert consistency. Window rows must match SQLite request identities/timestamps, remain within seven-day retention and use the exact hash/reference count/method of the supplied owned solids. Inputs cap at 16 KiB each / 1,000, report at 256 KiB. Reads are one query-only SQLite transaction and make no migrations/pruning. Safe atomic private-mode0600 publication fails closed on collision. Output reports sample/upload mix and separate OOD prevalence; it does not compute feature/OOD correlation or statistical significance. Thresholds are unvalidated screening heuristics, not industrial alert criteria. See docs/drift-analysis.md.
 
-## Current increment — durable local and cloud storage adapters
+## Prior increment — durable local and cloud storage adapters
 
-Branch feat/durable-storage-adapters adds backend/storage.py with a typed StorageAdapter protocol, LocalStorageAdapter, and AzureBlobStorageAdapter.
+PR #40 merged as db8a813 at c1adc4b/run39636274438: all four gates green, 334 Linux tests/13 browser checks. Main verified at 97 commits; clean tree/no open PRs before feat/authenticated-release-governance.
+Branch feat/durable-storage-adapters added backend/storage.py with a typed StorageAdapter protocol, LocalStorageAdapter, and AzureBlobStorageAdapter.
 LocalStorageAdapter provides atomic staging, 0600 file permissions, path traversal sanitization (blocking null bytes, absolute paths, and escaping references), bounded reads, and directory prefix listing.
 AzureBlobStorageAdapter provides a production cloud implementation using Azure Managed Identity (DefaultAzureCredential) with lazy dependency loading, ensuring local execution and tests require zero Azure packages or credentials. Factory get_storage_adapter() configures local vs. Azure adapters via environment variables. See docs/storage-architecture.md.
+
+## Current increment — authenticated operator release governance
+
+Branch feat/authenticated-release-governance adds backend/release.py with operator bearer token authentication and an append-only SQLite release audit journal (releases.sqlite).
+POST /api/operations/promote continues returning 403 when unauthenticated, maintaining full backwards compatibility. When presented with a timing-safe verified operator token (SHAPEOPS_OPERATOR_TOKEN), the endpoint evaluates the candidate model against strict release gates via pure evaluate_gates() and eligible(gates, authorized=True).
+Approved and rejected decisions are atomically committed to the immutable releases table protected by SQLite UPDATE/DELETE triggers. Read-only queries via mode=ro and PRAGMA query_only=ON power GET /api/operations/releases and trusted CLI inspection. See docs/release-governance.md.
