@@ -58,7 +58,8 @@ app = FastAPI(title="ShapeOps API", version="0.1.0", lifespan=lifespan)
 
 def rejected_body(scope):
     trace = scope.get("state", {}).get("trace", uuid.uuid4().hex)
-    record(trace, "upload", "unselected", False, 0, error="validation")
+    source = "sample" if scope.get("path") == "/api/inference/sample" else "upload"
+    record(trace, source, "unselected", False, 0, error="validation")
 
 
 app.add_middleware(BodyLimitMiddleware, on_reject=rejected_body)
