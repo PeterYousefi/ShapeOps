@@ -43,7 +43,7 @@ import {
 } from "lucide-react";
 import Viewer from "./Viewer";
 import PredictionDetails from "./PredictionDetails";
-import { DriftInspector, RegistryHistory } from "./EngineeringHistory";
+import { DriftInspector, RegistryHistory, ReleaseHistory } from "./EngineeringHistory";
 import type { Result, Registry, Telemetry, Operations } from "./types";
 import { COLORS } from "./types";
 import "./styles.css";
@@ -2129,11 +2129,12 @@ function App() {
                   </Empty>
                 )}
               </section>
+              <ReleaseHistory refreshKey={historyRevision} />
               <section className="panel">
                 <div className="panel-header">
                   <div className="panel-title">
                     <Server size={16} />
-                    <h2>Production release history</h2>
+                    <h2>Production cloud deployment history</h2>
                   </div>
                 </div>
                 <Empty title="No production deployments">
