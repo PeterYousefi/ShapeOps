@@ -284,8 +284,15 @@ Approved and rejected decisions are atomically committed to the immutable releas
 PR #42 merged as 86d72c9 at 953bbae/run39669459349: all four gates green, 345 Linux tests/13 browser checks. Main verified at 101 commits; clean tree/no open PRs before feat/operations-release-ui.
 Branch feat/telemetry-storage-archival integrated backend/storage.py into backend/export_telemetry.py via archive_snapshot() and CLI --archive flag, persisting retained snapshot archives directly into local or Azure Managed Identity cloud storage under immutable keys (<prefix>/<timestamp>_<sha16>.json). Validated retention bounds, exact JSON serialization, byte limits, and content types are enforced. See docs/telemetry-export.md.
 
-## Current increment — Operations Center release governance UI
+## Prior increment — Operations Center release governance UI
 
-Branch feat/operations-release-ui integrates the append-only SQLite release audit journal (GET /api/operations/releases) into the Operations screen via ReleaseHistory in src/EngineeringHistory.tsx.
+PR #43 merged as e88b4cc at cb89a22/run39671542109: all four gates green, 345 Linux tests/14 browser checks. Main verified at 103 commits; clean tree/no open PRs before feat/hiring-manager-portfolio-walkthrough.
+Branch feat/operations-release-ui integrated the append-only SQLite release audit journal (GET /api/operations/releases) into the Operations screen via ReleaseHistory in src/EngineeringHistory.tsx.
 Operators can view evaluated release decisions (Approved/Rejected), operator identities, timestamps, detailed release gate breakdowns (quality, compatibility, license, security) with pass/fail pills, candidate rationales, and export verifiable decision JSON records directly from the browser.
 Clean empty/loading/error states are implemented, with zero axe WCAG violations and verified mobile responsiveness. See docs/release-governance.md.
+
+## Current increment — hiring manager portfolio walkthrough & requirements matrix
+
+Branch feat/hiring-manager-portfolio-walkthrough introduces docs/hiring-manager-walkthrough.md tailored specifically for the Autodesk Machine Learning Operations Developer (26WD101494) requisition.
+The guide provides an executive mapping between requisition competencies and ShapeOps architectural implementation, an end-to-end 5-minute interactive exploration tour across all five functional experiences, and a consolidated summary of automated CI/CD and verification evidence across 103 Git commits and 43 merged pull requests.
+The requirements matrix (docs/requirements-matrix.md) was updated with current evidence and status.
