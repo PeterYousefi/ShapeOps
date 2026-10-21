@@ -13,11 +13,13 @@ from typing import Annotated, Literal, Self, Sequence
 import numpy as np
 from pydantic import Field, model_validator
 
-from backend.drift import FEATURES, vector
+from backend.drift import FEATURES, vector, reference_identity
 from backend.responses import Digest, Nonnegative, OutputModel, Probability, DriftObservation
+from backend.retention import REQUEST_MAX_AGE_SECONDS
 
 MAX_REPORT_BYTES = 256 * 1024
 MAX_OBSERVATIONS = 1000
+MAX_OBSERVATION_BYTES = 16 * 1024
 
 
 def kolmogorov_smirnov_distance(sample1: Sequence[float], sample2: Sequence[float]) -> float:
@@ -56,6 +58,12 @@ class FeatureDistribution(OutputModel):
 
     @model_validator(mode="after")
     def consistent_quantiles(self) -> Self:
+        if any(value < 0 or not math.isfinite(value) for value in (
+            self.observed_mean, self.observed_min, self.observed_q25, self.observed_median,
+            self.observed_q75, self.observed_max, self.reference_mean, self.reference_std,
+            self.reference_scale, self.standardized_shift, self.ks_distance,
+        )):
+            raise ValueError(f"Invalid nonnegative geometry statistics for feature {self.name}")
         if not (self.observed_min <= self.observed_q25 <= self.observed_median <= self.observed_q75 <= self.observed_max):
             raise ValueError(f"Inconsistent observed quantiles for feature {self.name}")
         return self
@@ -65,6 +73,7 @@ class WindowDriftReport(OutputModel):
     schema_version: Literal[1]
     origin: Literal["Window-level CAD geometry distribution drift analysis; screening only"]
     analyzed_at: Nonnegative
+    window_cutoff_at: Nonnegative
     total_observations: Annotated[int, Field(ge=1, le=MAX_OBSERVATIONS)]
     window_started_at: Nonnegative
     window_ended_at: Nonnegative
@@ -74,14 +83,26 @@ class WindowDriftReport(OutputModel):
     ks_threshold: Annotated[float, Field(ge=0, le=1)]
     drift_detected: bool
     flagged_features: list[str]
+    sample_count: Annotated[int, Field(ge=0)]
+    upload_count: Annotated[int, Field(ge=0)]
     ood_count: Annotated[int, Field(ge=0)]
     ood_rate: Probability
     features: dict[str, FeatureDistribution]
 
     @model_validator(mode="after")
     def consistent_summary(self) -> Self:
+        if set(self.features) != set(FEATURES) or any(self.features[name].name != name for name in self.features):
+            raise ValueError("Feature names do not match the CAD drift contract")
+        if self.window_cutoff_at > self.analyzed_at:
+            raise ValueError("Window cutoff is after analysis time")
+        if self.window_started_at < self.window_cutoff_at:
+            raise ValueError("Window contains observations older than its declared cutoff")
+        if self.window_ended_at > self.analyzed_at:
+            raise ValueError("Window contains observations newer than analysis time")
         if self.window_ended_at < self.window_started_at:
             raise ValueError("Window end timestamp precedes window start timestamp")
+        if self.sample_count + self.upload_count != self.total_observations:
+            raise ValueError("Source counts do not match total observations")
         if self.ood_count > self.total_observations:
             raise ValueError("OOD count exceeds total observations")
         expected_ood_rate = self.ood_count / self.total_observations
@@ -107,6 +128,7 @@ def analyze_distribution(
     shift_threshold: float = 3.0,
     ks_threshold: float = 0.5,
     analyzed_at: float | None = None,
+    window_cutoff_at: float | None = None,
 ) -> dict:
     if not observations:
         raise ValueError("Observations sequence must not be empty")
@@ -130,6 +152,11 @@ def analyze_distribution(
 
     ref_keys = sorted(reference_samples)
     ref_vectors = [vector(reference_samples[k]) for k in ref_keys]
+    expected_reference_id = reference_identity(reference_samples)
+    if any(obs.reference_id != expected_reference_id for obs in observations):
+        raise ValueError("Saved observation reference identity does not match the analysis reference")
+    if any(obs.reference_parts != len(reference_samples) for obs in observations):
+        raise ValueError("Saved observation reference population does not match the analysis reference")
     ref_matrix = np.asarray(ref_vectors, dtype=float)
     if ref_matrix.ndim != 2 or not len(ref_matrix) or not np.isfinite(ref_matrix).all():
         raise ValueError("Reference geometry matrix must be finite and non-empty")
@@ -138,22 +165,23 @@ def analyze_distribution(
     ref_stds = ref_matrix.std(axis=0)
     ref_scales = np.maximum(ref_stds, np.maximum(abs(ref_means) * 0.05, 1e-6))
 
-    reference_id = hashlib.sha256(
-        json.dumps(
-            {
-                "features": FEATURES,
-                "reference": ref_vectors,
-                "method": "absolute-standardized-deviation-v1",
-                "relative_floor": 0.05,
-                "absolute_floor": 1e-6,
-                "threshold": 3.0,
-            },
-            sort_keys=True,
-            allow_nan=False,
-        ).encode()
-    ).hexdigest()
+    reference_id = expected_reference_id
 
+    reference_ids = {obs.reference_id for obs in observations}
+    reference_counts = {obs.reference_parts for obs in observations}
+    feature_sets = [tuple(feature.name for feature in obs.features) for obs in observations]
+    if len(reference_ids) != 1 or len(reference_counts) != 1:
+        raise ValueError("Observations use incompatible reference identities or populations")
+    if any(names != tuple(FEATURES) for names in feature_sets):
+        raise ValueError("Observation features do not match the analyzed CAD feature contract")
+    if any(obs.threshold != 3 for obs in observations):
+        raise ValueError("Observation screening methods have incompatible thresholds")
     timestamps = [obs.at for obs in observations]
+    cutoff = min(timestamps) if window_cutoff_at is None else window_cutoff_at
+    if not math.isfinite(cutoff) or cutoff < 0 or cutoff > now:
+        raise ValueError("Invalid window cutoff timestamp")
+    if min(timestamps) < cutoff or max(timestamps) > now:
+        raise ValueError("Observations fall outside the declared seven-day analysis window")
     ood_flags = [obs.ood for obs in observations]
 
     feature_results: dict[str, dict] = {}
@@ -179,6 +207,8 @@ def analyze_distribution(
         r_scale = float(ref_scales[idx])
 
         shift = abs(obs_mean - r_mean) / r_scale
+        if not math.isfinite(shift):
+            raise ValueError(f"Standardized shift for {name} is not finite")
         ks_d = kolmogorov_smirnov_distance(obs_vals, ref_vals)
         alert = bool(shift >= shift_threshold or ks_d >= ks_threshold)
         if alert:
@@ -208,6 +238,7 @@ def analyze_distribution(
         "schema_version": 1,
         "origin": "Window-level CAD geometry distribution drift analysis; screening only",
         "analyzed_at": now,
+        "window_cutoff_at": cutoff,
         "total_observations": len(observations),
         "window_started_at": min(timestamps),
         "window_ended_at": max(timestamps),
@@ -217,6 +248,8 @@ def analyze_distribution(
         "ks_threshold": ks_threshold,
         "drift_detected": len(flagged) > 0,
         "flagged_features": flagged,
+        "sample_count": sum(obs.source == "sample" for obs in observations),
+        "upload_count": sum(obs.source == "upload" for obs in observations),
         "ood_count": ood_count,
         "ood_rate": float(ood_count / len(observations)),
         "features": feature_results,
@@ -246,22 +279,32 @@ def evaluate_database(
     if not 1 <= limit <= MAX_OBSERVATIONS:
         raise ValueError(f"Limit must be between 1 and {MAX_OBSERVATIONS}")
 
+    captured_at = time.time() if now is None else now
+    if not math.isfinite(captured_at) or captured_at < 0:
+        raise ValueError("Invalid analysis timestamp")
+
     db = sqlite3.connect(database.resolve().as_uri() + "?mode=ro", uri=True, timeout=2)
     db.row_factory = sqlite3.Row
     try:
         db.execute("PRAGMA query_only=ON")
+        db.execute("BEGIN")
         table_exists = bool(
             db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='drift_observations'").fetchone()
         )
         if not table_exists:
             raise ValueError("Table drift_observations does not exist in database")
         rows = db.execute(
-            "SELECT result FROM drift_observations ORDER BY at DESC, id DESC LIMIT ?",
-            (limit,),
+            "SELECT id, at, CASE WHEN length(CAST(result AS BLOB)) <= ? THEN result ELSE NULL END AS bounded_result "
+            "FROM drift_observations WHERE at >= ? AND at <= ? ORDER BY at DESC, id DESC LIMIT ?",
+            (MAX_OBSERVATION_BYTES, max(0.0, captured_at - REQUEST_MAX_AGE_SECONDS), captured_at, limit),
         ).fetchall()
         if not rows:
-            raise ValueError("No drift observations recorded in database")
-        observations = [DriftObservation.model_validate_json(row["result"]) for row in rows]
+            raise ValueError("No drift observations recorded in the seven-day window")
+        if any(row["bounded_result"] is None for row in rows):
+            raise ValueError("Saved drift observation exceeds the 16 KiB input budget")
+        observations = [DriftObservation.model_validate_json(row["bounded_result"]) for row in rows]
+        if any(row["id"] != obs.id or row["at"] != obs.at for row, obs in zip(rows, observations)):
+            raise ValueError("Saved drift observation does not match its indexed identity and timestamp")
     finally:
         db.close()
 
@@ -270,7 +313,8 @@ def evaluate_database(
         reference_samples=reference_samples,
         shift_threshold=shift_threshold,
         ks_threshold=ks_threshold,
-        analyzed_at=now,
+        analyzed_at=captured_at,
+        window_cutoff_at=max(0.0, captured_at - REQUEST_MAX_AGE_SECONDS),
     )
     payload = json.dumps(report, allow_nan=False, sort_keys=True, separators=(",", ":")).encode()
     if len(payload) > MAX_REPORT_BYTES:

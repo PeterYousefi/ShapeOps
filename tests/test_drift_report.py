@@ -1,12 +1,15 @@
 import json
+from pathlib import Path
 import sqlite3
 import subprocess
+import time
 import sys
 import uuid
 import pytest
 from pydantic import ValidationError
 
-from backend.drift import FEATURES, vector
+from backend.drift import FEATURES, vector, reference_identity
+from backend.retention import REQUEST_MAX_AGE_SECONDS
 from backend.drift_report import (
     FeatureDistribution,
     WindowDriftReport,
@@ -69,7 +72,6 @@ def _make_observation(
     ood: bool = False,
     ood_score: float = -0.1,
     threshold: float = 3.0,
-    reference_id: str = "a" * 64,
 ) -> DriftObservation:
     ref_vectors = [vector(ref_samples[k]) for k in sorted(ref_samples)]
     import numpy as np
@@ -96,7 +98,7 @@ def _make_observation(
             "at": at,
             "source": "sample",
             "model": "surface-rf-v1",
-            "reference_id": reference_id,
+            "reference_id": reference_identity(ref_samples),
             "reference_scope": "Owned procedural sample geometries; screening only",
             "reference_parts": len(ref_samples),
             "threshold": threshold,
@@ -136,15 +138,17 @@ def test_schema_validators():
             schema_version=1,
             origin="Window-level CAD geometry distribution drift analysis; screening only",
             analyzed_at=100.0,
+            window_cutoff_at=0.0,
             total_observations=1,
             window_started_at=200.0,
             window_ended_at=100.0,  # ended < started
             reference_parts=1,
-            reference_id="a" * 64,
             shift_threshold=3.0,
             ks_threshold=0.5,
             drift_detected=False,
             flagged_features=[],
+            sample_count=1,
+            upload_count=0,
             ood_count=0,
             ood_rate=0.0,
             features={},
@@ -217,7 +221,7 @@ def test_evaluate_database(tmp_path):
     conn.close()
 
     out_path = tmp_path / "report.json"
-    summary = evaluate_database(db_path, out_path, reference_samples=ref)
+    summary = evaluate_database(db_path, out_path, reference_samples=ref, now=154.0)
     assert out_path.exists()
     assert summary["observations"] == 4
     assert summary["drift_detected"] is False
@@ -228,7 +232,7 @@ def test_evaluate_database(tmp_path):
     collision_out = tmp_path / "collision.json"
     collision_out.write_text("existing")
     with pytest.raises(FileExistsError):
-        evaluate_database(db_path, collision_out, reference_samples=ref)
+        evaluate_database(db_path, collision_out, reference_samples=ref, now=154.0)
 
 
 def test_evaluate_database_failures(tmp_path):
@@ -267,7 +271,7 @@ def test_cli(tmp_path):
     from backend.cad import SAMPLES, describe, sample_shape
     real_ref = {s["id"]: describe(sample_shape(s["id"])) for s in SAMPLES}
     v = vector(real_ref["flange"])
-    obs = _make_observation(uuid.uuid4().hex, 150.0, v, ref_samples=real_ref)
+    obs = _make_observation(uuid.uuid4().hex, time.time(), v, ref_samples=real_ref)
     conn.execute(
         "INSERT INTO drift_observations VALUES (?, ?, ?)",
         (obs.id, obs.at, obs.model_dump_json()),
@@ -293,3 +297,56 @@ def test_cli(tmp_path):
     payload = json.loads(proc.stdout)
     assert payload["observations"] == 1
     assert out_path.exists()
+
+
+def test_analyzer_rejects_mixed_reference_identity_feature_order_and_future_rows():
+    ref = _mock_reference_samples()
+    values = vector(ref["part_a"])
+    first = _make_observation("1" * 32, 100, values, ref_samples=ref)
+    altered = first.model_copy(update={"reference_id": "f" * 64})
+    with pytest.raises(ValueError, match="reference identity"):
+        analyze_distribution([first, altered], ref, analyzed_at=101)
+    features = list(first.features)
+    reordered = first.model_copy(update={"features": list(reversed(features))})
+    with pytest.raises(ValueError, match="feature contract"):
+        analyze_distribution([reordered], ref, analyzed_at=101)
+    with pytest.raises(ValueError, match="cutoff"):
+        analyze_distribution([first], ref, analyzed_at=99)
+
+
+def test_analysis_binds_sqlite_identity_timestamp_and_reference():
+    # Use an isolated old-schema-compatible journal and prove index columns cannot
+    # redirect a valid JSON observation into another request/window.
+    from tempfile import TemporaryDirectory
+    with TemporaryDirectory() as directory:
+        path = Path(directory) / "telemetry.sqlite"
+        ref = _mock_reference_samples()
+        obs = _make_observation("1" * 32, 100, vector(ref["part_a"]), ref_samples=ref)
+        with sqlite3.connect(path) as db:
+            db.execute("CREATE TABLE drift_observations(id TEXT PRIMARY KEY, at REAL NOT NULL, result TEXT NOT NULL)")
+            db.execute("INSERT INTO drift_observations VALUES(?,?,?)", ("2" * 32, 100, obs.model_dump_json()))
+        with pytest.raises(ValueError, match="indexed identity"):
+            evaluate_database(path, path.parent / "report.json", reference_samples=ref, now=101)
+        with sqlite3.connect(path) as db:
+            db.execute("UPDATE drift_observations SET id=?,at=?", (obs.id, 99))
+        with pytest.raises(ValueError, match="indexed identity"):
+            evaluate_database(path, path.parent / "report.json", reference_samples=ref, now=101)
+
+
+def test_analysis_rejects_oversized_and_expired_rows():
+    from tempfile import TemporaryDirectory
+    with TemporaryDirectory() as directory:
+        path = Path(directory) / "telemetry.sqlite"
+        ref = _mock_reference_samples()
+        obs = _make_observation("1" * 32, 100, vector(ref["part_a"]), ref_samples=ref)
+        with sqlite3.connect(path) as db:
+            db.execute("CREATE TABLE drift_observations(id TEXT PRIMARY KEY, at REAL NOT NULL, result TEXT NOT NULL)")
+            db.execute("INSERT INTO drift_observations VALUES(?,?,?)", (obs.id, obs.at, obs.model_dump_json() + " " * 17000))
+        with pytest.raises(ValueError, match="16 KiB"):
+            evaluate_database(path, path.parent / "report.json", reference_samples=ref, now=101)
+        old_obs = _make_observation("2" * 32, 1, vector(ref["part_a"]), ref_samples=ref)
+        with sqlite3.connect(path) as db:
+            db.execute("DELETE FROM drift_observations")
+            db.execute("INSERT INTO drift_observations VALUES(?,?,?)", (old_obs.id, old_obs.at, old_obs.model_dump_json()))
+        with pytest.raises(ValueError, match="seven-day"):
+            evaluate_database(path, path.parent / "report.json", reference_samples=ref, now=REQUEST_MAX_AGE_SECONDS + 101)
