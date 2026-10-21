@@ -74,10 +74,10 @@ def load_dataset(manifest: Path) -> tuple[EvaluationDataset, str]:
     return dataset, hashlib.sha256(payload).hexdigest()
 
 
-def audit_dataset(manifest: Path) -> dict:
+def validated_inputs(manifest: Path) -> tuple[EvaluationDataset, str, list[tuple[EvaluationPart, bytes]]]:
     dataset, manifest_hash = load_dataset(manifest)
     root = manifest.parent.resolve()
-    inputs = []
+    inputs: list[tuple[EvaluationPart, bytes]] = []
     total = 0
     # Check the complete corpus before invoking expensive native parsing.
     for part in dataset.parts:
@@ -93,6 +93,12 @@ def audit_dataset(manifest: Path) -> dict:
         if hashlib.sha256(data).hexdigest() != part.sha256:
             raise ValueError('Dataset part checksum mismatch')
         inputs.append((part, data))
+    return dataset, manifest_hash, inputs
+
+
+def audit_dataset(manifest: Path) -> dict:
+    dataset, manifest_hash, inputs = validated_inputs(manifest)
+    total = sum(len(data) for _, data in inputs)
     from backend.app import process_step  # Reuse genuine bounded disposable CAD worker.
     results: list[dict] = []
     for part, data in inputs:
