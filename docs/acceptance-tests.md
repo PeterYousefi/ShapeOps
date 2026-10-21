@@ -1,5 +1,7 @@
 # Acceptance tests
 
+Latest verified source baseline: PR #33, merge26a413a, run39612392969 passed all four required jobs with287 Linux tests,10 Playwright tests,genuine native STEP checks and actual Grafana/Prometheus telemetry. The older counts/results below are historical evidence, not current suite totals. Full completion is governed by outstanding criteria in roadmap.md/open-issues.md, not a commit count or estimated percentage. This increment adds real isolated revision rollback coverage; require its exact-head hosted proof before marking that criterion verified.
+
 Verified on the local Apple Silicon workstation, Python 3.14.7, Node/Vite toolchain pinned in package-lock.json.
 
 - 43 Python tests pass in hosted Linux CI (42 pass on macOS with the Linux-only memory probe skipped). The suite includes 18 application/CAD tests, 13 governance policy checks and 12 native-worker budget/protocol checks. Includes five materially distinct samples, actual input-dependent predictions, distinct estimator identities, real STEP upload round-trip, filename sanitization, temporary cleanup, invalid/oversized uploads, live telemetry increments, model provenance, comparison correspondence, bad-quality rejection, forbidden promotion, isolated recovery, OOD shifted input, and real STEP parsing/surface-distance checks for each of the five original solids.
