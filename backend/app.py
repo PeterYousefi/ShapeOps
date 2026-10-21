@@ -15,8 +15,8 @@ from backend.security import AdmissionMiddleware, BodyLimitMiddleware, RateLimit
 from backend.worker_limits import MAX_RESULT_BYTES
 from backend.retention import initialize_retention, prune_records
 from backend.contracts import Geometry, validate_geometry
-from backend.registry import list_runs, get_run
-from backend.responses import InferenceResult, TelemetryResponse, OperationsResponse, DrillResult, RegisteredModel, TrainingHistory, TrainingRunDetail
+from backend.registry import list_runs, get_run, list_failures
+from backend.responses import InferenceResult, TelemetryResponse, OperationsResponse, DrillResult, RegisteredModel, TrainingHistory, TrainingRunDetail, TrainingFailureHistory
 
 logger = logging.getLogger("shapeops")
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -385,6 +385,11 @@ def registry():
 @app.get("/api/registry/runs", response_model=TrainingHistory)
 def training_runs(limit: int = Query(20, ge=1, le=100)):
     return {"origin": "Actual completed local baseline training runs", "runs": list_runs(REGISTRY_DB, limit)}
+
+
+@app.get("/api/registry/failures", response_model=TrainingFailureHistory)
+def training_failures(limit: int = Query(20, ge=1, le=100)):
+    return {"origin": "Actual handled local baseline initialization failures", "failures": list_failures(REGISTRY_DB, limit)}
 
 
 @app.get("/api/registry/runs/{run_id}", response_model=TrainingRunDetail)

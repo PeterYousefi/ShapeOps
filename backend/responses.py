@@ -241,3 +241,21 @@ class TrainingRunDetail(OutputModel):
         if self.completed_at < self.started_at or len({m.id for m in self.models}) != len(self.models):
             raise ValueError("Invalid training timestamps or duplicate model manifests")
         return self
+
+
+class TrainingFailure(OutputModel):
+    id: RunIdentity
+    started_at: Nonnegative
+    failed_at: Nonnegative
+    category: Literal["validation", "storage", "execution"]
+
+    @model_validator(mode="after")
+    def chronological(self) -> Self:
+        if self.failed_at < self.started_at:
+            raise ValueError("Invalid failed training timestamps")
+        return self
+
+
+class TrainingFailureHistory(OutputModel):
+    origin: Literal["Actual handled local baseline initialization failures"]
+    failures: Annotated[list[TrainingFailure], Field(max_length=100)]
