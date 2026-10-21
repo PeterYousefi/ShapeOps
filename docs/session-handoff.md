@@ -258,8 +258,15 @@ New trusted-local python -m backend.export_telemetry reads one read-only SQLite 
 
 Full local317 passed/one Linux-only skip(113.94s); final focused17 passed(0.32s),including concurrency snapshot and failed-publication tests added after full-suite collection. Ruff/MyPy19files/workflow policy/typecheck/build passed; all13 Chromium checks passed(59.5s). Actual QA export preserved39 requests in93,518bytes; its hash was reported, records remain private in /tmp. No UI source changes; generated unrelated screenshots restored.
 
-## Current increment — window-level geometry distribution drift analysis
+## Prior increment — window-level geometry distribution drift analysis
 
-Branch feat/window-drift-analysis adds python -m backend.drift_report for trusted-local window-level distribution drift evaluation across retained CAD geometry screening observations.
+PR #38 merged as 3380ea5 and PR #39 merged as ed51bb4 at 850207a/run39634938992: all four gates green, 325 Linux tests/13 browser checks. Main verified at 95 commits; clean tree/no open PRs before feat/durable-storage-adapters.
+Branch feat/window-drift-analysis added python -m backend.drift_report for trusted-local window-level distribution drift evaluation across retained CAD geometry screening observations.
 The tool reads an isolated read-only SQLite transaction from drift_observations, compares observed feature distributions against sample baseline references across all ten geometry features, and evaluates standardized mean shifts plus non-parametric two-sample Kolmogorov-Smirnov distance statistics (D_KS in [0, 1]).
 Strict Pydantic contracts (FeatureDistribution, WindowDriftReport) enforce finite/nonnegative CAD summaries, exact feature names, quantile monotonicity, source counts and alert consistency. Window rows must match SQLite request identities/timestamps, remain within seven-day retention and use the exact hash/reference count/method of the supplied owned solids. Inputs cap at 16 KiB each / 1,000, report at 256 KiB. Reads are one query-only SQLite transaction and make no migrations/pruning. Safe atomic private-mode0600 publication fails closed on collision. Output reports sample/upload mix and separate OOD prevalence; it does not compute feature/OOD correlation or statistical significance. Thresholds are unvalidated screening heuristics, not industrial alert criteria. See docs/drift-analysis.md.
+
+## Current increment — durable local and cloud storage adapters
+
+Branch feat/durable-storage-adapters adds backend/storage.py with a typed StorageAdapter protocol, LocalStorageAdapter, and AzureBlobStorageAdapter.
+LocalStorageAdapter provides atomic staging, 0600 file permissions, path traversal sanitization (blocking null bytes, absolute paths, and escaping references), bounded reads, and directory prefix listing.
+AzureBlobStorageAdapter provides a production cloud implementation using Azure Managed Identity (DefaultAzureCredential) with lazy dependency loading, ensuring local execution and tests require zero Azure packages or credentials. Factory get_storage_adapter() configures local vs. Azure adapters via environment variables. See docs/storage-architecture.md.
