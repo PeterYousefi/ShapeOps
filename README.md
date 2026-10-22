@@ -1,6 +1,7 @@
 # ShapeOps
 
-**CAD inference with an operational paper trail.**
+> 🚀 **Live Demo:** [https://shapeops.thankfulsea-51976d63.canadacentral.azurecontainerapps.io](https://shapeops.thankfulsea-51976d63.canadacentral.azurecontainerapps.io/)  
+> **CAD inference with an operational paper trail.**
 
 ShapeOps is a local-first engineering platform for real STEP geometry, face-level model inference, interactive inspection, artifact lineage and actual runtime telemetry. Its six screens are Overview, Inference Studio, Model Registry, Observability, Operations and Documentation.
 
