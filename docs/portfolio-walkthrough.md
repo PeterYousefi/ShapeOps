@@ -1,5 +1,6 @@
 # ShapeOps — Platform Architecture & Engineering Portfolio Walkthrough
 
+> 🚀 **Live Demo:** [https://shapeops.thankfulsea-51976d63.canadacentral.azurecontainerapps.io](https://shapeops.thankfulsea-51976d63.canadacentral.azurecontainerapps.io/)  
 > **Production-Grade MLOps Platform for 3D CAD Geometry & Boundary Representation Inference**  
 > **Repository:** [PeterYousefi/ShapeOps](https://github.com/PeterYousefi/ShapeOps)  
 > **Engineering Baseline:** 105 cohesive Git commits, 44 merged pull requests, 4 green CI status checks on every merge.
