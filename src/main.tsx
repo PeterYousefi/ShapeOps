@@ -2343,8 +2343,8 @@ function App() {
                     <p>
                       Manufacturing-feature segmentation, calibrated confidence,
                       industrial generalization, or validated production drift
-                      thresholds. This is not an implementation of Autodesk
-                      BRepNet.
+                      thresholds. This is an analytic surface classifier baseline,
+                      not a graph neural network.
                     </p>
                     <h3>OOD screening</h3>
                     <p>

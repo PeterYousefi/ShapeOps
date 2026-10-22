@@ -291,8 +291,13 @@ Branch feat/operations-release-ui integrated the append-only SQLite release audi
 Operators can view evaluated release decisions (Approved/Rejected), operator identities, timestamps, detailed release gate breakdowns (quality, compatibility, license, security) with pass/fail pills, candidate rationales, and export verifiable decision JSON records directly from the browser.
 Clean empty/loading/error states are implemented, with zero axe WCAG violations and verified mobile responsiveness. See docs/release-governance.md.
 
-## Current increment — hiring manager portfolio walkthrough & requirements matrix
+## Prior increment — portfolio walkthrough & requirements matrix
 
-Branch feat/hiring-manager-portfolio-walkthrough introduces docs/hiring-manager-walkthrough.md tailored specifically for the Autodesk Machine Learning Operations Developer (26WD101494) requisition.
-The guide provides an executive mapping between requisition competencies and ShapeOps architectural implementation, an end-to-end 5-minute interactive exploration tour across all five functional experiences, and a consolidated summary of automated CI/CD and verification evidence across 103 Git commits and 43 merged pull requests.
+PR #44 merged as 3f778f3 at ed53958/run39689408665: all four gates green, 345 Linux tests/14 browser checks. Main verified at 105 commits; clean tree/no open PRs before chore/portfolio-clean-branding.
+Branch feat/hiring-manager-portfolio-walkthrough introduced docs/portfolio-walkthrough.md, providing an executive architectural overview, core MLOps competencies mapping, an end-to-end 5-minute interactive exploration tour across all five functional experiences, and a consolidated summary of automated CI/CD and verification evidence across 105 Git commits and 44 merged pull requests.
 The requirements matrix (docs/requirements-matrix.md) was updated with current evidence and status.
+
+## Current increment — clean portfolio branding
+
+Branch chore/portfolio-clean-branding cleans all company-specific or job-requisition identifiers across the repository to ensure ShapeOps stands as a general, production-grade engineering portfolio.
+Updated docs/portfolio-walkthrough.md, README.md, src/main.tsx, and docs/requirements-matrix.md.

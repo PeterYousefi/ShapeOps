@@ -79,10 +79,11 @@ Hosted CI has verified image build, initial Kind deployment, genuine inference s
 
 ## Engineering guides
 
+- [Portfolio Architecture & Walkthrough](docs/portfolio-walkthrough.md)
 - [Product specification](docs/product-specification.md) · [Architecture and decisions](docs/architecture.md)
 - [Model methodology and governance](docs/models.md) · [Security threat model](docs/security.md)
 - [Developer and testing guide](docs/development.md) · [Operations runbook](docs/operations.md)
 - [Azure/Terraform readiness](docs/azure-readiness.md) · [Requirements matrix](docs/requirements-matrix.md)
 - [Progress](docs/progress.md) · [Roadmap](docs/roadmap.md) · [Session handoff](docs/session-handoff.md)
 
-Original application code and procedural geometry use the MIT license. Third-party libraries retain their own licenses. ShapeOps uses an original identity and has no Autodesk affiliation.
+Original application code and procedural geometry use the MIT license. Third-party libraries retain their own licenses.

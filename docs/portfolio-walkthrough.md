@@ -1,9 +1,8 @@
 # ShapeOps — Platform Architecture & Engineering Portfolio Walkthrough
 
-> **Tailored to Autodesk AI/ML Platform**  
-> **Job Requisition:** Machine Learning Operations Developer, Inference (26WD101494)  
+> **Production-Grade MLOps Platform for 3D CAD Geometry & Boundary Representation Inference**  
 > **Repository:** [PeterYousefi/ShapeOps](https://github.com/PeterYousefi/ShapeOps)  
-> **Engineering Baseline:** 103 cohesive Git commits, 43 merged pull requests, 4 green CI status checks on every merge.
+> **Engineering Baseline:** 105 cohesive Git commits, 44 merged pull requests, 4 green CI status checks on every merge.
 
 ---
 
@@ -37,9 +36,9 @@ flowchart TD
 
 ---
 
-## 2. Alignment to Autodesk Req 26WD101494 Competencies
+## 2. Core MLOps & Platform Engineering Competencies
 
-| Competency Area | Requisition Requirement | ShapeOps Implementation & Architectural Proof |
+| Platform Discipline | Engineering Standard | ShapeOps Implementation & Architectural Proof |
 | :--- | :--- | :--- |
 | **Inference Serving & CAD** | Operationalize ML inference serving for CAD and 3D geometry applications. | **Genuine B-Rep Preprocessing:** Subprocess-isolated OpenCASCADE parser extracts ordered faces, bounds, areas, and principal curvatures. Exact face ID correspondence is maintained between numerical descriptors, model predictions, and Three.js 3D meshes. |
 | **Automated ML Pipelines** | Build, validate, package, and deploy reproducible ML pipelines. | **Deterministic Training Pipeline:** Procedural CAD generation with fixed random seeds produces train/eval splits. Content-addressed model packaging computes SHA-256 manifests, parameter snapshots, and held-out evaluation reports. |
