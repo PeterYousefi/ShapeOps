@@ -1,7 +1,14 @@
 # ShapeOps
 
-> 🚀 **Live Demo:** [https://shapeops.thankfulsea-51976d63.canadacentral.azurecontainerapps.io](https://shapeops.thankfulsea-51976d63.canadacentral.azurecontainerapps.io/)  
-> **CAD inference with an operational paper trail.**
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Azure%20Cloud%20(Canada%20Central)-0078D4?style=for-the-badge&logo=microsoftazure&logoColor=white)](https://shapeops.thankfulsea-51976d63.canadacentral.azurecontainerapps.io/)
+[![Status](https://img.shields.io/badge/Deployment-Live%20%26%20Operational-success?style=for-the-badge)](https://shapeops.thankfulsea-51976d63.canadacentral.azurecontainerapps.io/)
+
+---
+
+### 🌐 **Live Cloud URL:** [https://shapeops.thankfulsea-51976d63.canadacentral.azurecontainerapps.io/](https://shapeops.thankfulsea-51976d63.canadacentral.azurecontainerapps.io/)
+> **CAD inference with an operational paper trail.** Fully self-contained OpenCASCADE geometry engine and scikit-learn inference hosted on Azure Container Apps.
+
+---
 
 ShapeOps is a local-first engineering platform for real STEP geometry, face-level model inference, interactive inspection, artifact lineage and actual runtime telemetry. Its six screens are Overview, Inference Studio, Model Registry, Observability, Operations and Documentation.
 
