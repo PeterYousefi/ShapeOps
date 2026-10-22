@@ -27,5 +27,5 @@
 | CI/CD | GitHub Actions workflow with 4 parallel status checks required on PR heads | All 4 gates (`application`, `container`, `kubernetes`, `terraform`) green across 43 merged PRs |
 | Git progress | 103 commits, 43 merged pull requests to `PeterYousefi/ShapeOps` | Natural cohesive commit history; no manufactured volume |
 | Domain and cloud cost | `docs/azure-readiness.md` | Cost estimates and architecture documented; no billable actions without approval |
-| Documentation and walkthrough | Complete documentation library and `docs/hiring-manager-walkthrough.md` | Detailed platform architecture, 5-minute tour, and requisition alignment |
+| Documentation and walkthrough | Complete documentation library and `docs/portfolio-walkthrough.md` | Detailed platform architecture, 5-minute tour, and engineering competencies |
 | Public production deployment | None | Requires explicit approval and remaining release readiness work |
