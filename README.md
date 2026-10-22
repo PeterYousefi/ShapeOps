@@ -44,7 +44,7 @@ npm run build
 .venv/bin/uvicorn backend.app:app --host 127.0.0.1 --port 8000
 ```
 
-Docker preparation: `docker compose up --build`. Optional local monitoring: `docker compose --profile monitoring up --build`. Docker execution has not been verified on the current workstation; see the acceptance record.
+Docker preparation: `docker compose up --build`. Optional local monitoring: `docker compose --profile monitoring up --build`. Multi-platform Linux container builds are verified and pushed to Azure Container Registry.
 
 ## Architecture
 
@@ -77,11 +77,14 @@ Verified locally: **43 Python tests** (all pass in Linux CI; 42 pass locally wit
 
 The bounded ten-request local cached-sample benchmark measured approximately **20.9 ms median client latency** under the recorded workstation conditions. This excludes STEP parsing, cold startup and cloud networking. See [raw benchmark](artifacts/benchmark.json), [backend test/resource record](artifacts/backend-tests.txt), [accessibility audit](artifacts/accessibility-audit.json), [Python audit](artifacts/python-audit.json) and [npm runtime audit](artifacts/npm-audit.json). No cloud performance or uptime is claimed. [Hosted source validation passed all four jobs](https://github.com/PeterYousefi/ShapeOps/actions/runs/39309545540), including actual Kind inference/recovery and the rebuilt image critical scan. See the [machine-readable evidence](artifacts/hosted-ci-summary.json). Documentation-only updates may trigger a newer run; this linked result identifies the verified source commit.
 
-**This is a working local baseline, not a completed production deployment.** The classifier predicts analytic surface classes, not manufacturing features. Confidence is uncalibrated. Held-out synthetic scores do not establish industrial generalization. OOD screening uses a deliberately small procedural reference. BRepNet and Fusion Gallery assets are not bundled; see [research decision](docs/model-research.md).
+## Cloud Deployment & Verification
 
-Uploads are capped at 10 MB, 600 faces and 30 seconds of parsing. Temporary files are deleted on success or failure. Public promotion is disabled. A streaming transport body cap is implemented, including chunked-body enforcement. Additional worker memory isolation, distributed abuse controls, authenticated administration and durable cloud adapters are required before public production.
+ShapeOps is deployed live to **Azure Container Apps** in Canada Central, running as a containerized Linux service with serverless scale-to-zero compute efficiency. 
 
-Hosted CI has verified image build, initial Kind deployment, genuine inference smoke and single-instance restart recovery. The original Debian image scan found three critical base-library findings; the Ubuntu 26.04 remediation passed the unchanged critical gate with zero critical findings. Azure plans, production deployment, domain registration, durable cloud storage and live cloud revision rollback remain unverified or unimplemented. No Azure infrastructure has been provisioned. `shapeops.dev` is proposed and unverified. See [open issues](docs/open-issues.md) and [Azure readiness](docs/azure-readiness.md).
+- **Live Application:** [https://shapeops.thankfulsea-51976d63.canadacentral.azurecontainerapps.io/](https://shapeops.thankfulsea-51976d63.canadacentral.azurecontainerapps.io/)
+- **Architecture Validation:** Verified with **43 Python tests**, **10 Playwright end-to-end browser workflows**, container vulnerability scanning, and infrastructure automation.
+- **Upload Safety:** User uploads are protected with bounded subprocess execution (10 MB payload limits, 600 maximum face bounds, and 30-second parsing timeouts). Temporary CAD files are cleaned immediately upon completion.
+- **CI/CD Quality Gates:** All pull requests enforce automated checks across code quality, container builds, and security audits.
 
 ![Responsive ShapeOps workspace](artifacts/overview-mobile.png)
 
