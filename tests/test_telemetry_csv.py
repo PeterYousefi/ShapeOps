@@ -3,11 +3,12 @@ import csv
 import io
 import pytest
 from fastapi.testclient import TestClient
-from backend.app import app, _sanitize_csv_cell
 
 
 @pytest.fixture(scope="module")
 def client():
+    from backend.app import app
+
     with TestClient(app) as test_client:
         yield test_client
 
@@ -26,6 +27,8 @@ def client():
     ],
 )
 def test_csv_cell_sanitization_neutralizes_formula_prefixes(raw, expected):
+    from backend.app import _sanitize_csv_cell
+
     assert _sanitize_csv_cell(raw) == expected
 
 

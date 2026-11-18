@@ -2,12 +2,13 @@
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
-from backend.app import app
 from backend.responses import ReadinessChecks, ReadinessResponse
 
 
 @pytest.fixture(scope="module")
 def client():
+    from backend.app import app
+
     with TestClient(app) as test_client:
         yield test_client
 
@@ -25,6 +26,8 @@ def test_readiness_endpoint_reports_ready_when_initialized(client):
 
 
 def test_readiness_endpoint_returns_503_when_models_missing(client):
+    from backend.app import app
+
     original_models = app.state.models
     try:
         app.state.models = {}

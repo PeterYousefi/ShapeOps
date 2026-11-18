@@ -1,11 +1,12 @@
 """Tests for Prometheus /metrics exposition format and telemetry gauges."""
 import pytest
 from fastapi.testclient import TestClient
-from backend.app import app
 
 
 @pytest.fixture(scope="module")
 def client():
+    from backend.app import app
+
     with TestClient(app) as test_client:
         yield test_client
 
@@ -29,6 +30,6 @@ def test_metrics_exposes_quantiles_ood_rate_and_model_breakdown(client):
     assert "# TYPE shapeops_inference_latency_p50_ms gauge" in body
     assert "# TYPE shapeops_inference_latency_p95_ms gauge" in body
     assert "# TYPE shapeops_inference_ood_rate gauge" in body
-    assert '# TYPE shapeops_inference_requests_by_model gauge' in body
+    assert "# TYPE shapeops_inference_requests_by_model gauge" in body
     assert 'shapeops_inference_requests_by_model{model="surface-rf-v1"}' in body
     assert "# TYPE shapeops_last_request_latency_ms gauge" in body

@@ -2,13 +2,14 @@
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
-from backend.app import app
 from backend.cad import SAMPLES
 from backend.responses import SampleMetadata
 
 
 @pytest.fixture(scope="module")
 def client():
+    from backend.app import app
+
     with TestClient(app) as test_client:
         yield test_client
 
