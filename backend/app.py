@@ -6,7 +6,7 @@ import stat
 import numpy as np
 import cadquery as cq
 from fastapi import FastAPI, File, UploadFile, HTTPException, Request, Query
-from fastapi.responses import Response, FileResponse
+from fastapi.responses import Response, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from backend.cad import SAMPLES, sample_shape, describe
@@ -18,7 +18,7 @@ from backend.contracts import Geometry, validate_geometry
 from backend.registry import list_runs, get_run, list_failures
 from backend.drift import observation as drift_observation
 from backend.job_history import list_jobs, get_job, HistoryCapacityError
-from backend.responses import InferenceResult, TelemetryResponse, OperationsResponse, DrillResult, RegisteredModel, TrainingHistory, TrainingRunDetail, TrainingFailureHistory, CandidateJob, CandidateJobHistory, DriftHistory, DriftObservation
+from backend.responses import InferenceResult, TelemetryResponse, OperationsResponse, DrillResult, RegisteredModel, TrainingHistory, TrainingRunDetail, TrainingFailureHistory, CandidateJob, CandidateJobHistory, DriftHistory, DriftObservation, ReadinessChecks, ReadinessResponse
 
 logger = logging.getLogger("shapeops")
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -247,6 +247,34 @@ def health():
         "cad": "OpenCascade",
         "production_deployed": False,
     }
+
+
+@app.get("/api/ready", response_model=ReadinessResponse)
+def readiness():
+    models = getattr(app.state, "models", None) or {}
+    cached_samples = getattr(app.state, "samples", None) or {}
+    db_ok = False
+    try:
+        with connection() as db:
+            db.execute("SELECT 1").fetchone()
+            db_ok = True
+    except sqlite3.Error:
+        db_ok = False
+    checks = ReadinessChecks(
+        models_loaded=len(models) > 0,
+        samples_cached=len(cached_samples) == len(SAMPLES),
+        telemetry_db=db_ok,
+    )
+    ready = checks.models_loaded and checks.samples_cached and checks.telemetry_db
+    payload = ReadinessResponse(
+        ready=ready,
+        models_count=len(models),
+        samples_count=len(cached_samples),
+        checks=checks,
+    )
+    if not ready:
+        return JSONResponse(status_code=503, content=payload.model_dump())
+    return payload
 
 
 @app.get("/api/samples")

@@ -328,3 +328,27 @@ class DriftObservation(OutputModel):
 class DriftHistory(OutputModel):
     origin: Literal['Actual retained local inference geometry screening']
     observations: Annotated[list[DriftObservation], Field(max_length=100)]
+
+
+class ReadinessChecks(OutputModel):
+    models_loaded: bool
+    samples_cached: bool
+    telemetry_db: bool
+
+
+class ReadinessResponse(OutputModel):
+    ready: bool
+    models_count: Annotated[int, Field(ge=0)]
+    samples_count: Annotated[int, Field(ge=0)]
+    checks: ReadinessChecks
+
+    @model_validator(mode='after')
+    def consistent_ready(self) -> Self:
+        expected = (
+            self.checks.models_loaded
+            and self.checks.samples_cached
+            and self.checks.telemetry_db
+        )
+        if self.ready != expected:
+            raise ValueError('Readiness status does not match component checks')
+        return self
