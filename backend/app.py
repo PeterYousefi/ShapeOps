@@ -1,4 +1,4 @@
-import asyncio, json, logging, os, sqlite3, subprocess, sys, tempfile, time, uuid
+import asyncio, csv, io, json, logging, os, sqlite3, subprocess, sys, tempfile, time, uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import cast
@@ -486,6 +486,69 @@ def telemetry() -> TelemetryResponse:
         "requests": rows,
         "throughput_per_minute": sum(r["at"] > time.time() - 60 for r in rows),
     })
+
+
+def _sanitize_csv_cell(value: object) -> str:
+    text = "" if value is None else str(value)
+    if text and text[0] in ("=", "+", "-", "@", "\t", "\r"):
+        return f"'{text}"
+    return text
+
+
+@app.get("/api/telemetry/export.csv")
+def telemetry_csv(limit: int = Query(500, ge=1, le=1000)) -> Response:
+    with connection() as db:
+        prune_records(db)
+        rows = [
+            dict(r)
+            for r in db.execute(
+                "SELECT id, at, source, model, success, latency, parse, execution, faces, confidence, ood, error "
+                "FROM requests ORDER BY at DESC, id DESC LIMIT ?",
+                (limit,),
+            )
+        ]
+    columns = (
+        "id",
+        "at",
+        "source",
+        "model",
+        "success",
+        "latency_ms",
+        "parse_ms",
+        "execution_ms",
+        "faces",
+        "confidence",
+        "ood",
+        "error",
+    )
+    buf = io.StringIO()
+    writer = csv.writer(buf, lineterminator="\n")
+    writer.writerow(columns)
+    for row in rows:
+        writer.writerow(
+            [
+                _sanitize_csv_cell(row["id"]),
+                f"{float(row['at']):.3f}",
+                _sanitize_csv_cell(row["source"]),
+                _sanitize_csv_cell(row["model"]),
+                int(row["success"]),
+                f"{float(row['latency']):.3f}",
+                f"{float(row['parse']):.3f}",
+                f"{float(row['execution']):.3f}",
+                int(row["faces"]),
+                f"{float(row['confidence']):.6f}",
+                int(row["ood"]),
+                _sanitize_csv_cell(row["error"]),
+            ]
+        )
+    return Response(
+        buf.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": 'attachment; filename="shapeops-telemetry.csv"',
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 @app.get("/metrics")
