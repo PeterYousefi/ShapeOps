@@ -1,4 +1,4 @@
-import asyncio, json, logging, os, sqlite3, subprocess, sys, tempfile, time, uuid
+import asyncio, csv, io, json, logging, os, sqlite3, subprocess, sys, tempfile, time, uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import cast
@@ -6,7 +6,7 @@ import stat
 import numpy as np
 import cadquery as cq
 from fastapi import FastAPI, File, UploadFile, HTTPException, Request, Query
-from fastapi.responses import Response, FileResponse
+from fastapi.responses import Response, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from backend.cad import SAMPLES, sample_shape, describe
@@ -18,7 +18,7 @@ from backend.contracts import Geometry, validate_geometry
 from backend.registry import list_runs, get_run, list_failures
 from backend.drift import observation as drift_observation
 from backend.job_history import list_jobs, get_job, HistoryCapacityError
-from backend.responses import InferenceResult, TelemetryResponse, OperationsResponse, DrillResult, RegisteredModel, TrainingHistory, TrainingRunDetail, TrainingFailureHistory, CandidateJob, CandidateJobHistory, DriftHistory, DriftObservation
+from backend.responses import InferenceResult, TelemetryResponse, OperationsResponse, DrillResult, RegisteredModel, TrainingHistory, TrainingRunDetail, TrainingFailureHistory, CandidateJob, CandidateJobHistory, DriftHistory, DriftObservation, ReadinessChecks, ReadinessResponse, SampleMetadata
 
 logger = logging.getLogger("shapeops")
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -249,9 +249,64 @@ def health():
     }
 
 
+@app.get("/api/ready", response_model=ReadinessResponse)
+def readiness():
+    models = getattr(app.state, "models", None) or {}
+    cached_samples = getattr(app.state, "samples", None) or {}
+    db_ok = False
+    try:
+        with connection() as db:
+            db.execute("SELECT 1").fetchone()
+            db_ok = True
+    except sqlite3.Error:
+        db_ok = False
+    checks = ReadinessChecks(
+        models_loaded=len(models) > 0,
+        samples_cached=len(cached_samples) == len(SAMPLES),
+        telemetry_db=db_ok,
+    )
+    ready = checks.models_loaded and checks.samples_cached and checks.telemetry_db
+    payload = ReadinessResponse(
+        ready=ready,
+        models_count=len(models),
+        samples_count=len(cached_samples),
+        checks=checks,
+    )
+    if not ready:
+        return JSONResponse(status_code=503, content=payload.model_dump())
+    return payload
+
+
 @app.get("/api/samples")
 def samples():
     return SAMPLES
+
+
+@app.get("/api/samples/{key}/metadata", response_model=SampleMetadata)
+def sample_metadata(key: str) -> SampleMetadata:
+    entry = next((s for s in SAMPLES if s["id"] == key), None)
+    if entry is None or key not in app.state.samples:
+        raise HTTPException(404, "Sample not found")
+    geometry = app.state.samples[key]
+    distribution: dict[str, int] = {}
+    total_area = 0.0
+    for face in geometry["faces"]:
+        surface = str(face["surface"])
+        distribution[surface] = distribution.get(surface, 0) + 1
+        total_area += float(face["area"])
+    return SampleMetadata.model_validate(
+        {
+            "id": entry["id"],
+            "name": entry["name"],
+            "description": entry["description"],
+            "face_count": geometry["face_count"],
+            "edge_count": geometry["edge_count"],
+            "volume": float(geometry["volume"]),
+            "total_surface_area": round(total_area, 3),
+            "bounds": [float(b) for b in geometry["bounds"]],
+            "surface_distribution": distribution,
+        }
+    )
 
 
 @app.get("/api/samples/{key}/download")
@@ -460,6 +515,69 @@ def telemetry() -> TelemetryResponse:
     })
 
 
+def _sanitize_csv_cell(value: object) -> str:
+    text = "" if value is None else str(value)
+    if text and text[0] in ("=", "+", "-", "@", "\t", "\r"):
+        return f"'{text}"
+    return text
+
+
+@app.get("/api/telemetry/export.csv")
+def telemetry_csv(limit: int = Query(500, ge=1, le=1000)) -> Response:
+    with connection() as db:
+        prune_records(db)
+        rows = [
+            dict(r)
+            for r in db.execute(
+                "SELECT id, at, source, model, success, latency, parse, execution, faces, confidence, ood, error "
+                "FROM requests ORDER BY at DESC, id DESC LIMIT ?",
+                (limit,),
+            )
+        ]
+    columns = (
+        "id",
+        "at",
+        "source",
+        "model",
+        "success",
+        "latency_ms",
+        "parse_ms",
+        "execution_ms",
+        "faces",
+        "confidence",
+        "ood",
+        "error",
+    )
+    buf = io.StringIO()
+    writer = csv.writer(buf, lineterminator="\n")
+    writer.writerow(columns)
+    for row in rows:
+        writer.writerow(
+            [
+                _sanitize_csv_cell(row["id"]),
+                f"{float(row['at']):.3f}",
+                _sanitize_csv_cell(row["source"]),
+                _sanitize_csv_cell(row["model"]),
+                int(row["success"]),
+                f"{float(row['latency']):.3f}",
+                f"{float(row['parse']):.3f}",
+                f"{float(row['execution']):.3f}",
+                int(row["faces"]),
+                f"{float(row['confidence']):.6f}",
+                int(row["ood"]),
+                _sanitize_csv_cell(row["error"]),
+            ]
+        )
+    return Response(
+        buf.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": 'attachment; filename="shapeops-telemetry.csv"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
 @app.get("/metrics")
 def metrics() -> Response:
     t = telemetry()
@@ -468,9 +586,60 @@ def metrics() -> Response:
         "# TYPE shapeops_inference_requests gauge",
         f'shapeops_inference_requests{{outcome="success"}} {t.successful}',
         f'shapeops_inference_requests{{outcome="failure"}} {t.failed}',
+        "# HELP shapeops_inference_throughput_per_minute Observed inference requests in the trailing 60 seconds",
+        "# TYPE shapeops_inference_throughput_per_minute gauge",
+        f"shapeops_inference_throughput_per_minute {t.throughput_per_minute}",
+        "# HELP shapeops_registered_models_total Number of registered inference models loaded in runtime",
+        "# TYPE shapeops_registered_models_total gauge",
+        f"shapeops_registered_models_total {len(getattr(app.state, 'registry', []) or [])}",
     ]
+    if t.p50 is not None:
+        lines.extend(
+            [
+                "# HELP shapeops_inference_latency_p50_ms Median successful inference latency in retained local window",
+                "# TYPE shapeops_inference_latency_p50_ms gauge",
+                f"shapeops_inference_latency_p50_ms {t.p50:.4f}",
+            ]
+        )
+    if t.p95 is not None:
+        lines.extend(
+            [
+                "# HELP shapeops_inference_latency_p95_ms 95th percentile successful inference latency in retained local window",
+                "# TYPE shapeops_inference_latency_p95_ms gauge",
+                f"shapeops_inference_latency_p95_ms {t.p95:.4f}",
+            ]
+        )
+    if t.ood_rate is not None:
+        lines.extend(
+            [
+                "# HELP shapeops_inference_ood_rate Fraction of successful inference requests flagged out-of-distribution",
+                "# TYPE shapeops_inference_ood_rate gauge",
+                f"shapeops_inference_ood_rate {t.ood_rate:.6f}",
+            ]
+        )
+    model_counts: dict[str, int] = {}
+    for row in t.requests:
+        model_counts[row.model] = model_counts.get(row.model, 0) + 1
+    if model_counts:
+        lines.extend(
+            [
+                "# HELP shapeops_inference_requests_by_model Retained inference requests grouped by model version",
+                "# TYPE shapeops_inference_requests_by_model gauge",
+            ]
+        )
+        for model_name in sorted(model_counts):
+            safe_label = model_name.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "")
+            lines.append(
+                f'shapeops_inference_requests_by_model{{model="{safe_label}"}} {model_counts[model_name]}'
+            )
     for r in t.requests[:1]:
-        lines.append(f"shapeops_last_request_latency_ms {r.latency}")
+        lines.extend(
+            [
+                "# HELP shapeops_last_request_latency_ms Latency in milliseconds of the most recent inference request",
+                "# TYPE shapeops_last_request_latency_ms gauge",
+                f"shapeops_last_request_latency_ms {r.latency}",
+            ]
+        )
     return Response("\n".join(lines) + "\n", media_type="text/plain; version=0.0.4")
 
 

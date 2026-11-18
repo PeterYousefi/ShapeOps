@@ -35,6 +35,7 @@ export default function Viewer({
   const ref = useRef<HTMLDivElement>(null),
     api = useRef<{
       reset: () => void;
+      setView: (preset: "iso" | "top" | "front") => void;
       zoom: (v: number) => void;
       wire: () => void;
       focus: (id: number) => void;
@@ -60,7 +61,7 @@ export default function Viewer({
     host.appendChild(renderer.domElement);
     renderer.domElement.setAttribute(
       "aria-label",
-      "Interactive CAD viewport. Drag to rotate, scroll to zoom, right-drag to pan.",
+      "Interactive CAD viewport. Drag to rotate, scroll to zoom, right-drag to pan. Keys: 0 or R to reset, 1-3 for isometric/top/front views, W for wireframe, +/- to zoom.",
     );
     renderer.domElement.tabIndex = 0;
     const scene = new THREE.Scene();
@@ -151,15 +152,24 @@ export default function Viewer({
     scene.add(grid);
     resources.push(grid.geometry, gm);
     const direction = new THREE.Vector3(1, -1.25, 1.05);
-    const reset = () => {
-      const fit = fitGeometry(points, direction, camera.fov, camera.aspect);
+    const applyView = (viewDir: THREE.Vector3) => {
+      const fit = fitGeometry(points, viewDir, camera.fov, camera.aspect);
       camera.position.copy(fit.position);
       controls.target.copy(fit.target);
       controls.update();
     };
+    const reset = () => applyView(direction);
     reset();
     api.current = {
       reset,
+      setView: (preset) => {
+        const presetDirections: Record<"iso" | "top" | "front", THREE.Vector3> = {
+          iso: direction,
+          top: new THREE.Vector3(0, -0.05, 1),
+          front: new THREE.Vector3(0, -1, 0.05),
+        };
+        applyView(presetDirections[preset]);
+      },
       focus: (id) => {
         const mesh = meshes.find((m) => m.userData.face === id);
         if (!mesh) return;
@@ -227,7 +237,14 @@ export default function Viewer({
       if (hit) onSelect(hit.object.userData.face);
     };
     const key = (e: KeyboardEvent) => {
-      if (e.key === "0") reset();
+      if (e.key === "0" || e.key === "r" || e.key === "R") reset();
+      if (e.key === "1") api.current?.setView("iso");
+      if (e.key === "2") api.current?.setView("top");
+      if (e.key === "3") api.current?.setView("front");
+      if (e.key === "w" || e.key === "W") {
+        api.current?.wire();
+        setWire((prev) => !prev);
+      }
       if (e.key === "+" || e.key === "=") api.current?.zoom(0.85);
       if (e.key === "-") api.current?.zoom(1.15);
       if (e.key.startsWith("Arrow")) {
@@ -381,7 +398,7 @@ export default function Viewer({
       <div className="viewer-tools">
         <button
           disabled={!result || !!error}
-          title="Reset camera (0)"
+          title="Reset camera (0 / R)"
           aria-label="Reset camera"
           onClick={() => api.current?.reset()}
         >
@@ -416,7 +433,7 @@ export default function Viewer({
         <i />
         <button
           disabled={!result || !!error}
-          title="Toggle wireframe"
+          title="Toggle wireframe (W)"
           aria-label="Toggle wireframe"
           aria-pressed={wire}
           className={wire ? "active" : ""}

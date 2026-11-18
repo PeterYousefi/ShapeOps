@@ -1866,6 +1866,13 @@ function App() {
                   <div className="panel-foot">
                     <a
                       className="text-button"
+                      href="/api/telemetry/export.csv"
+                      download="shapeops-telemetry.csv"
+                    >
+                      Export CSV <ArrowDownToLine size={13} />
+                    </a>
+                    <a
+                      className="text-button"
                       href="/metrics"
                       target="_blank"
                       rel="noreferrer"
@@ -2498,7 +2505,17 @@ function App() {
                     </pre>
                     <h3>Endpoints</h3>
                     {[
-                      ["GET", "/api/health", "Runtime readiness"],
+                      ["GET", "/api/health", "Service liveness status"],
+                      [
+                        "GET",
+                        "/api/ready",
+                        "Readiness probe (models, samples, SQLite)",
+                      ],
+                      [
+                        "GET",
+                        "/api/samples/{key}/metadata",
+                        "Lightweight cached CAD geometry metadata",
+                      ],
                       [
                         "GET",
                         "/api/registry",
@@ -2518,6 +2535,11 @@ function App() {
                         "GET",
                         "/api/telemetry",
                         "Retained runtime request metrics",
+                      ],
+                      [
+                        "GET",
+                        "/api/telemetry/export.csv",
+                        "Sanitized CSV telemetry download",
                       ],
                       [
                         "POST",
