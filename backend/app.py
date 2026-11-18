@@ -18,7 +18,7 @@ from backend.contracts import Geometry, validate_geometry
 from backend.registry import list_runs, get_run, list_failures
 from backend.drift import observation as drift_observation
 from backend.job_history import list_jobs, get_job, HistoryCapacityError
-from backend.responses import InferenceResult, TelemetryResponse, OperationsResponse, DrillResult, RegisteredModel, TrainingHistory, TrainingRunDetail, TrainingFailureHistory, CandidateJob, CandidateJobHistory, DriftHistory, DriftObservation, ReadinessChecks, ReadinessResponse
+from backend.responses import InferenceResult, TelemetryResponse, OperationsResponse, DrillResult, RegisteredModel, TrainingHistory, TrainingRunDetail, TrainingFailureHistory, CandidateJob, CandidateJobHistory, DriftHistory, DriftObservation, ReadinessChecks, ReadinessResponse, SampleMetadata
 
 logger = logging.getLogger("shapeops")
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -280,6 +280,33 @@ def readiness():
 @app.get("/api/samples")
 def samples():
     return SAMPLES
+
+
+@app.get("/api/samples/{key}/metadata", response_model=SampleMetadata)
+def sample_metadata(key: str) -> SampleMetadata:
+    entry = next((s for s in SAMPLES if s["id"] == key), None)
+    if entry is None or key not in app.state.samples:
+        raise HTTPException(404, "Sample not found")
+    geometry = app.state.samples[key]
+    distribution: dict[str, int] = {}
+    total_area = 0.0
+    for face in geometry["faces"]:
+        surface = str(face["surface"])
+        distribution[surface] = distribution.get(surface, 0) + 1
+        total_area += float(face["area"])
+    return SampleMetadata.model_validate(
+        {
+            "id": entry["id"],
+            "name": entry["name"],
+            "description": entry["description"],
+            "face_count": geometry["face_count"],
+            "edge_count": geometry["edge_count"],
+            "volume": float(geometry["volume"]),
+            "total_surface_area": round(total_area, 3),
+            "bounds": [float(b) for b in geometry["bounds"]],
+            "surface_distribution": distribution,
+        }
+    )
 
 
 @app.get("/api/samples/{key}/download")
