@@ -28,3 +28,13 @@ TrainingFailureHistory at GET /api/registry/failures documents actual handled ba
 CandidateJobHistory and CandidateJob document read-only saved local job discovery at /api/registry/candidate-jobs and its ID detail route. State-dependent candidate/finish requirements and safe scope are validated. Discovery and file reads are bounded independently of query limits; corrupt files are rejected, not repaired. Saved running metadata is not a liveness assertion. No job-creation POST or promotion authority is exposed.
 
 DriftHistory at GET /api/drift exposes actual retained local geometry screening. DriftObservation/DriftFeature validate finite feature evidence, reference scale, derived deviation, unique feature names and warning/OOD consistency. Success request IDs/source/model bind persistence; no failed-request geometry or past backfill. Stored reference/method identity prevents silently rewriting historical comparisons. This is screening history, not calibrated industrial drift significance.
+
+
+## Operational readiness and inspection contracts
+
+ReadinessResponse at `GET /api/ready` documents live runtime readiness checks for container orchestrators and health monitors. Unlike the shallow `/api/health` process liveness check, readiness evaluates: (1) whether model instances are actively initialized in application state, (2) whether all pre-computed CAD sample geometries are cached and ready for zero-latency inference, and (3) whether the local SQLite telemetry store is reachable and writable. When all conditions are satisfied, it returns HTTP 200 with typed boolean breakdown `ReadinessChecks`; if any check is unfulfilled, it responds with HTTP 503 Service Unavailable.
+
+SampleMetadata at `GET /api/samples/{key}/metadata` provides lightweight structural inspection for procedural reference parts prior to requesting full mesh buffers. It exposes `key`, human-readable `label`, `face_count`, `vertex_count`, `triangle_count`, uncompressed `byte_size`, and axis-aligned 3D `bounding_box` dimensions. Invalid sample keys return HTTP 404 Not Found.
+
+Streaming CSV export at `GET /api/telemetry/export.csv` provides RFC 4180-compliant export of retained request telemetry. Queries are bounded by `limit` (1 to 1000 rows). To prevent formula injection attacks when opened in spreadsheet software (CSV Excel Macro Injection / CWE-1236), string cells containing leading command prefixes (`=`, `+`, `-`, `@`, `\t`, `\r`) are defensively sanitized with a leading single quote prefix (`'`). Export responses enforce `Cache-Control: no-store` to prevent caching dynamic operational logs in downstream proxies.
+
