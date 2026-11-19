@@ -820,6 +820,12 @@ main {
   background: #354355;
   color: #a4eadb;
 }
+.viewer-tools button.view-preset {
+  font-size: 8px;
+  font-family: var(--mono);
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
 .viewer-tools i {
   height: 15px;
   width: 1px;

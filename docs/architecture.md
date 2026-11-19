@@ -27,3 +27,12 @@ Graphite/navy surfaces, restrained cyan interaction signals, blue planar geometr
 ## ADR 006 — cloud approval boundary
 
 Terraform is preparation only. Single Consumption app, bounded replica count, private storage and least-privilege identity. Local telemetry is not durable in ephemeral cloud storage; an adapter/export must precede production. No automatic apply, deployment or promotion is wired to a push. A manual deployment-preparation workflow intentionally performs no deployment. Do not infer that an authenticated cloud release system exists.
+
+## ADR 007 — separate liveness and readiness probe semantics
+
+Container orchestrators (Kubernetes, Azure Container Apps) require distinct semantics for process liveness versus traffic readiness. `/api/health` serves as a shallow liveness probe verifying that the ASGI event loop is responsive, preventing container restart thrashing during model initialization. `/api/ready` validates complete backend readiness: all active scikit-learn model artifacts are instantiated in memory, all five procedural reference CAD samples are tessellated and cached in application state, and the SQLite telemetry store is open and writable. Routing layers receive HTTP 503 until these dependencies are satisfied.
+
+## ADR 008 — defensive telemetry export and formula neutralization
+
+Allowing CSV downloads of telemetry and execution records introduces spreadsheet formula injection risks (CWE-1236 / CSV injection) when exported data is analyzed in tools like Microsoft Excel, LibreOffice Calc, or Google Sheets. The `/api/telemetry/export.csv` endpoint enforces RFC 4180 formatting and defensively prefixes any cell whose content begins with formula execution triggers (`=`, `+`, `-`, `@`, `\t`, `\r`) with a single apostrophe (`'`). Responses enforce strict `Cache-Control: no-store` headers to ensure operational telemetry is not retained in downstream intermediary caches.
+

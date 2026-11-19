@@ -24,6 +24,20 @@ ShapeOps is a local-first engineering platform for real STEP geometry, face-leve
 
 The in-app Documentation screen includes the full timed walkthrough and interactive API reference.
 
+### 3D Viewport Controls & Shortcuts
+
+| Action | Pointer / Mouse | Keyboard Shortcut |
+| :--- | :--- | :--- |
+| **Orbit** | Left-click + drag | Arrow keys |
+| **Pan** | Right-click + drag | — |
+| **Zoom** | Scroll wheel | `+` / `-` |
+| **Reset View** | Reset toolbar button | `0` or `R` |
+| **Isometric Preset** | `ISO` toolbar button | `1` |
+| **Top-Down Preset** | `TOP` toolbar button | `2` |
+| **Front Preset** | `FRN` toolbar button | `3` |
+| **Wireframe Overlay** | Wireframe toolbar button | `W` |
+| **Select Face** | Click CAD mesh face | Click face table row |
+
 ## Run locally
 
 Requires Node.js 22+ and Python 3.14 with compatible native CAD wheels.

@@ -404,6 +404,34 @@ export default function Viewer({
         >
           <RotateCcw size={16} />
         </button>
+        <button
+          disabled={!result || !!error}
+          title="Isometric view (1)"
+          aria-label="Isometric view"
+          className="view-preset"
+          onClick={() => api.current?.setView("iso")}
+        >
+          ISO
+        </button>
+        <button
+          disabled={!result || !!error}
+          title="Top view (2)"
+          aria-label="Top view"
+          className="view-preset"
+          onClick={() => api.current?.setView("top")}
+        >
+          TOP
+        </button>
+        <button
+          disabled={!result || !!error}
+          title="Front view (3)"
+          aria-label="Front view"
+          className="view-preset"
+          onClick={() => api.current?.setView("front")}
+        >
+          FRN
+        </button>
+        <i />
         {selected !== null && (
           <button
             disabled={!result || !!error}
@@ -459,7 +487,7 @@ export default function Viewer({
       </div>
       <div className="viewport-foot">
         <span>
-          <Move3D size={13} /> Drag to orbit <b>·</b> Scroll to zoom
+          <Move3D size={13} /> Drag to orbit <b>·</b> Scroll to zoom <b>·</b> Keys 0/1/2/3/W
         </span>
         <span className="mono">PERSPECTIVE</span>
       </div>

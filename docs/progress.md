@@ -213,3 +213,16 @@ Kind now captures a healthy revision, injects an unwritable-data-dir startup fau
 Rollback PR #34 merged asd6a7ebf at0b0c341 (run39619727174):295 Linux tests/10 browser checks,all four gates green. Downloaded proof verified healthy2 -> crashed3 -> restored4,same exact original pod spec and genuine STEP after rollback. Main85 commits/public-protected governance passed; clean tree/no open PRs before this increment.
 
 Success inference now atomically persists typed geometry screening with request identity,reference/method hash,actual topology/extent/area/surface fractions and derived comparisons. Existing ML OOD evidence remains separate. History survives restart and follows request retention; failed/past requests receive no invented geometry. GET /api/drift is bounded/typed. Zero-variance scale floors and threshold are explicit procedural screening choices,not calibrated industrial drift significance. Mesh/face feature vectors are not copied into evidence. Full local302 passed,one Linux-only skip(87.50s); focused8 passed(22.11s). Final Ruff/MyPy18files/policy/frontend build pass. Final targeted identity/transaction guard regression passed(19.47s); all-four hosted exact-head jobs required before merge. UI/user services untouched; no Azure deployment. Window-level statistical tests/UI integration/industrial validation/cloud durability remain open.
+
+## Developer experience and operational readiness tooling
+
+Platform enhancements PR #53 introduced readiness probing at `/api/ready`, metadata inspection at `/api/samples/{key}/metadata`, sanitized CSV export at `/api/telemetry/export.csv`, and expanded Prometheus quantile metrics.
+
+This increment delivers complete documentation and tooling around those operational boundaries:
+1. `docs/api-contracts.md` documents OpenAPI contracts for `/api/ready`, `/api/samples/{key}/metadata`, and defensive formula sanitization in `/api/telemetry/export.csv`.
+2. `docs/architecture.md` records ADR 007 (liveness versus readiness probe separation) and ADR 008 (defensive CSV export formula neutralization).
+3. `scripts/verify_health.py` adds an operational CLI diagnostic tool for verifying service health, readiness checks, and model/sample state with JSON and exit-code support.
+4. `tests/test_health_check_cli.py` adds unit test coverage for the verification CLI with mock responses, error handling, and test-isolation compliance.
+5. `src/Viewer.tsx` introduces preset camera view buttons (`ISO`, `TOP`, `FRN`), shortcut hints, and CSS styling.
+6. `README.md` documents 3D viewport controls and keyboard shortcuts for developer and evaluator workflows.
+
