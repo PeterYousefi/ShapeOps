@@ -38,3 +38,18 @@ SampleMetadata at `GET /api/samples/{key}/metadata` provides lightweight structu
 
 Streaming CSV export at `GET /api/telemetry/export.csv` provides RFC 4180-compliant export of retained request telemetry. Queries are bounded by `limit` (1 to 1000 rows). To prevent formula injection attacks when opened in spreadsheet software (CSV Excel Macro Injection / CWE-1236), string cells containing leading command prefixes (`=`, `+`, `-`, `@`, `\t`, `\r`) are defensively sanitized with a leading single quote prefix (`'`). Export responses enforce `Cache-Control: no-store` to prevent caching dynamic operational logs in downstream proxies.
 
+VersionResponse at `GET /api/version` provides typed runtime platform and engine inspection. It exposes semantic `version`, `app_name`, underlying `cad_engine` (OpenCASCADE), runtime `python_version`, host `os_platform`, active `models_count`, cached `samples_count`, process `uptime_seconds`, and operational `status` enum (`operational` or `degraded`).
+
+
+## Defensive HTTP response headers
+
+All HTTP responses emitted by the application enforce baseline defense-in-depth headers:
+- `X-Content-Type-Options: nosniff` to block MIME confusion attacks.
+- `X-Frame-Options: DENY` to defend against framing and clickjacking.
+- `Referrer-Policy: same-origin` to prevent leaking request paths across origins.
+- `X-XSS-Protection: 0` to disable problematic legacy browser filter heuristics per modern OWASP guidelines.
+- `Cross-Origin-Opener-Policy: same-origin` to isolate the top-level browsing context.
+- `Permissions-Policy: camera=(), microphone=(), geolocation=()` to restrict unnecessary hardware access.
+- `X-Request-ID: <hex32>` providing correlation identifiers bound to the telemetry SQLite store.
+
+
