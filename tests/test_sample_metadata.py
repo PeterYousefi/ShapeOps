@@ -2,6 +2,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
+
 from backend.cad import SAMPLES
 from backend.responses import SampleMetadata
 
@@ -48,3 +49,16 @@ def test_sample_metadata_rejects_mismatched_surface_distribution():
                 "surface_distribution": {"Planar": 4},
             }
         )
+
+
+def test_sample_step_download_headers_and_content(client):
+    response = client.get("/api/samples/bracket/download")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/step"
+    assert 'attachment; filename="bracket.step"' in response.headers["content-disposition"]
+    assert response.headers["cache-control"] == "public, max-age=86400, immutable"
+    assert response.content.startswith(b"ISO-10303-21;")
+
+    missing_response = client.get("/api/samples/unknown_part/download")
+    assert missing_response.status_code == 404
+
