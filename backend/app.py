@@ -87,6 +87,9 @@ async def headers(request: Request, call_next):
             "X-Content-Type-Options": "nosniff",
             "Referrer-Policy": "same-origin",
             "X-Frame-Options": "DENY",
+            "X-XSS-Protection": "0",
+            "Cross-Origin-Opener-Policy": "same-origin",
+            "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
         }
     )
     return response
