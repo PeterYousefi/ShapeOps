@@ -22,6 +22,9 @@ Registry entries now expose RegisteredModel, and completed history exposes Train
 
 History validates UUID-format run identities, finite chronological timestamps, one to sixteen unique model references/manifests per completed run and at most one hundred unique summary runs. Current registry entries carry run_id; immutable historical manifests retain their original shape without that later association field. Both history summary and detail verify journal manifest hashes and model identity bindings through read-only SQLite transactions. Invalid internal records fail response validation rather than receiving invented defaults. Missing run details still return 404 and invalid query limits return 422. This work adds no failed-run lifecycle, cloud durability, external estimator loading or production promotion.
 
+Direct model card lookup at `GET /api/registry/models/{model_id}` returns the active `RegisteredModel` manifest for a specific model identifier (e.g. `surface-rf-v1` or `surface-et-v2`). The response exposes estimator checksums, content-addressed package ID, training/evaluation row counts, cross-validation metrics, algorithm hyperparameters, and pure release gate evaluations. Requests for unknown or unregistered model IDs return HTTP 404 Not Found.
+
+
 
 TrainingFailureHistory at GET /api/registry/failures documents actual handled baseline initialization failures, with bounded query limits and chronological finite timestamps. Only a closed category enum is exposed; no raw diagnostic details or fabricated past records. Failed attempts remain separate from successful run/model snapshots. POST is unsupported. Capture limits and possible completed-snapshot/report-failure overlap are documented in models.md.
 
@@ -35,6 +38,9 @@ DriftHistory at GET /api/drift exposes actual retained local geometry screening.
 ReadinessResponse at `GET /api/ready` documents live runtime readiness checks for container orchestrators and health monitors. Unlike the shallow `/api/health` process liveness check, readiness evaluates: (1) whether model instances are actively initialized in application state, (2) whether all pre-computed CAD sample geometries are cached and ready for zero-latency inference, and (3) whether the local SQLite telemetry store is reachable and writable. When all conditions are satisfied, it returns HTTP 200 with typed boolean breakdown `ReadinessChecks`; if any check is unfulfilled, it responds with HTTP 503 Service Unavailable.
 
 SampleMetadata at `GET /api/samples/{key}/metadata` provides lightweight structural inspection for procedural reference parts prior to requesting full mesh buffers. It exposes `key`, human-readable `label`, `face_count`, `vertex_count`, `triangle_count`, uncompressed `byte_size`, and axis-aligned 3D `bounding_box` dimensions. Invalid sample keys return HTTP 404 Not Found.
+
+Sample STEP downloads at `GET /api/samples/{key}/download` stream real procedural ISO-10303 STEP CAD part files (`application/step`). Because reference geometry is deterministic and immutable, responses include `Cache-Control: public, max-age=86400, immutable` headers to avoid redundant surface re-tessellation and file serialization across client sessions.
+
 
 Streaming CSV export at `GET /api/telemetry/export.csv` provides RFC 4180-compliant export of retained request telemetry. Queries are bounded by `limit` (1 to 1000 rows). To prevent formula injection attacks when opened in spreadsheet software (CSV Excel Macro Injection / CWE-1236), string cells containing leading command prefixes (`=`, `+`, `-`, `@`, `\t`, `\r`) are defensively sanitized with a leading single quote prefix (`'`). Export responses enforce `Cache-Control: no-store` to prevent caching dynamic operational logs in downstream proxies.
 

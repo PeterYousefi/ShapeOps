@@ -239,4 +239,18 @@ This increment delivers runtime introspection and HTTP security hardening:
 8. `docs/api-contracts.md`: Documented `VersionResponse` OpenAPI contract and standard defensive HTTP headers.
 9. `docs/architecture.md`: Recorded ADR 009 on application-layer security headers and browsing context isolation.
 
+## Model card lookup and developer benchmarking tooling
+
+This increment delivers model registry lookup endpoints, performance benchmarking CLI tooling, and frontend developer scripts:
+1. `backend/app.py`: Implemented `GET /api/registry/models/{model_id}` endpoint returning individual `RegisteredModel` manifests with 404 error handling for unregistered models.
+2. `tests/test_model_lookup.py`: Added unit and contract tests verifying `GET /api/registry/models/{model_id}` status codes, checksums, package IDs, and stages.
+3. `backend/app.py`: Added immutable `Cache-Control: public, max-age=86400, immutable` headers to procedural STEP sample downloads (`GET /api/samples/{key}/download`).
+4. `tests/test_sample_metadata.py`: Added tests verifying STEP download content headers, caching directives, and ISO-10303 formatting.
+5. `scripts/benchmark.py`: Refactored inference benchmark into a modular CLI with `--base-url`, `--models`, `--samples`, `--delay`, `--timeout`, and `--json` arguments.
+6. `tests/test_benchmark_cli.py`: Created unit test suite covering benchmark CLI execution, row collection, artifact persistence, and error handling.
+7. `package.json`: Added `typecheck` and `preview` scripts to frontend npm configuration.
+8. `docs/api-contracts.md`: Documented `GET /api/registry/models/{model_id}` contract and STEP download caching semantics.
+9. `docs/development.md`: Updated developer guide with benchmarking CLI usage and frontend npm verification commands.
+
+
 
