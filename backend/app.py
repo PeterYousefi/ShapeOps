@@ -345,7 +345,10 @@ def download(key: str):
         return Response(
             path.read_bytes(),
             media_type="application/step",
-            headers={"Content-Disposition": f'attachment; filename="{key}.step"'},
+            headers={
+                "Content-Disposition": f'attachment; filename="{key}.step"',
+                "Cache-Control": "public, max-age=86400, immutable",
+            },
         )
 
 
@@ -475,10 +478,11 @@ def registry():
 
 
 @app.get("/api/registry/models/{model_id}", response_model=RegisteredModel)
-def registered_model(model_id: str) -> RegisteredModel:
+def registered_model(model_id: str):
     models = getattr(app.state, "registry", None) or []
     for m in models:
-        if m.id == model_id:
+        m_id = m.get("id") if isinstance(m, dict) else getattr(m, "id", None)
+        if m_id == model_id:
             return m
     raise HTTPException(404, f"Model '{model_id}' not found in active registry")
 
