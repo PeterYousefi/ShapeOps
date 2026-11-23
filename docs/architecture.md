@@ -36,3 +36,14 @@ Container orchestrators (Kubernetes, Azure Container Apps) require distinct sema
 
 Allowing CSV downloads of telemetry and execution records introduces spreadsheet formula injection risks (CWE-1236 / CSV injection) when exported data is analyzed in tools like Microsoft Excel, LibreOffice Calc, or Google Sheets. The `/api/telemetry/export.csv` endpoint enforces RFC 4180 formatting and defensively prefixes any cell whose content begins with formula execution triggers (`=`, `+`, `-`, `@`, `\t`, `\r`) with a single apostrophe (`'`). Responses enforce strict `Cache-Control: no-store` headers to ensure operational telemetry is not retained in downstream intermediary caches.
 
+## ADR 009 — application-layer HTTP security headers and browsing context isolation
+
+To minimize client-side attack surface without relying on external reverse proxy or CDN configurations, ShapeOps enforces standard defensive HTTP headers directly within the application ASGI middleware:
+1. `X-Content-Type-Options: nosniff` defends against MIME type confusion.
+2. `X-Frame-Options: DENY` prevents framing and clickjacking.
+3. `Referrer-Policy: same-origin` shields request query parameters and internal routing state.
+4. `Cross-Origin-Opener-Policy: same-origin` isolates top-level browser contexts, protecting WebGL memory buffers against speculative cross-origin side channels.
+5. `Permissions-Policy: camera=(), microphone=(), geolocation=()` denies unused device access.
+6. `X-XSS-Protection: 0` adheres to modern OWASP guidance by disabling legacy regex-based XSS filtering that introduced audit bypasses.
+
+

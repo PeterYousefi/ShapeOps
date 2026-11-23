@@ -226,3 +226,17 @@ This increment delivers complete documentation and tooling around those operatio
 5. `src/Viewer.tsx` introduces preset camera view buttons (`ISO`, `TOP`, `FRN`), shortcut hints, and CSS styling.
 6. `README.md` documents 3D viewport controls and keyboard shortcuts for developer and evaluator workflows.
 
+## Runtime versioning and HTTP security defense-in-depth
+
+This increment delivers runtime introspection and HTTP security hardening:
+1. `backend/app.py` & `backend/responses.py`: Implemented typed `GET /api/version` endpoint returning semantic version, OpenCASCADE engine details, Python runtime, active model count, cached sample count, and process uptime.
+2. `tests/test_version.py`: Added unit and response contract tests verifying `GET /api/version` schema, valid positive uptime, and strict rejection of invalid or unknown fields.
+3. `backend/app.py`: Hardened application-layer HTTP response headers with `Cross-Origin-Opener-Policy: same-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=()`, and `X-XSS-Protection: 0`.
+4. `tests/test_security_headers.py`: Added dedicated test suite verifying defense-in-depth security headers across all endpoints.
+5. `scripts/verify_health.py`: Enhanced CLI health probe with `--check-version` metadata inspection and quiet mode (`-q`) for CI automation.
+6. `tests/test_health_check_cli.py`: Added unit tests covering `--check-version` and quiet mode execution.
+7. `src/main.tsx`: Surfaced `GET /api/version` in interactive documentation and added engine badge to the application footer.
+8. `docs/api-contracts.md`: Documented `VersionResponse` OpenAPI contract and standard defensive HTTP headers.
+9. `docs/architecture.md`: Recorded ADR 009 on application-layer security headers and browsing context isolation.
+
+

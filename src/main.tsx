@@ -2513,6 +2513,11 @@ function App() {
                       ],
                       [
                         "GET",
+                        "/api/version",
+                        "Runtime metadata (OpenCASCADE engine, platform, uptime)",
+                      ],
+                      [
+                        "GET",
                         "/api/samples/{key}/metadata",
                         "Lightweight cached CAD geometry metadata",
                       ],
@@ -2572,7 +2577,7 @@ function App() {
               ShapeOps <span className="muted">/</span> Engineering intelligence
             </span>
             <span>
-              Local-first platform <span className="tiny-dot" /> v0.1.0
+              Local-first platform <span className="tiny-dot" /> v0.1.0 · OpenCASCADE 7.9.3
             </span>
           </footer>
         </main>

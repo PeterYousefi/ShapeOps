@@ -173,4 +173,84 @@ def test_main_cli_ready_only_flag():
             base_url="http://custom:9000",
             timeout=5.0,
             ready_only=True,
+            check_version=False,
         )
+
+
+def test_verify_service_with_version_check():
+    def mock_fetch(url: str, timeout: float = 5.0):
+        if url.endswith("/api/health"):
+            return 200, {"status": "healthy"}
+        if url.endswith("/api/ready"):
+            return 200, {
+                "ready": True,
+                "models_count": 2,
+                "samples_count": 5,
+                "checks": {
+                    "models_loaded": True,
+                    "samples_cached": True,
+                    "telemetry_db": True,
+                },
+            }
+        if url.endswith("/api/version"):
+            return 200, {
+                "version": "0.1.0",
+                "app_name": "ShapeOps",
+                "cad_engine": "OpenCascade 7.9.3",
+                "python_version": "3.14.7",
+                "uptime_seconds": 12.3,
+            }
+        return 404, {}
+
+    with patch.object(probe, "fetch_json", side_effect=mock_fetch):
+        report = probe.verify_service("http://mocked", check_version=True)
+        assert report["healthy"] is True
+        assert report["ready"] is True
+        assert report["details"]["version"]["ok"] is True
+        assert report["details"]["version"]["body"]["version"] == "0.1.0"
+
+
+def test_main_cli_quiet_mode(capsys):
+    healthy_report = {
+        "base_url": "http://127.0.0.1:8000",
+        "healthy": True,
+        "ready": True,
+        "details": {
+            "health": {"ok": True, "status_code": 200, "body": {"status": "healthy"}},
+            "readiness": {"ok": True, "status_code": 200, "body": {"ready": True}},
+        },
+    }
+    with patch.object(probe, "verify_service", return_value=healthy_report):
+        code = probe.main(["--quiet"])
+        assert code == 0
+        captured = capsys.readouterr()
+        assert captured.out == ""
+
+
+def test_main_cli_check_version_flag(capsys):
+    healthy_report = {
+        "base_url": "http://127.0.0.1:8000",
+        "healthy": True,
+        "ready": True,
+        "details": {
+            "health": {"ok": True, "status_code": 200, "body": {"status": "healthy"}},
+            "readiness": {"ok": True, "status_code": 200, "body": {"ready": True}},
+            "version": {
+                "ok": True,
+                "body": {
+                    "app_name": "ShapeOps",
+                    "version": "0.1.0",
+                    "cad_engine": "OpenCascade 7.9.3",
+                    "python_version": "3.14.7",
+                    "uptime_seconds": 15.0,
+                },
+            },
+        },
+    }
+    with patch.object(probe, "verify_service", return_value=healthy_report):
+        code = probe.main(["--check-version"])
+        assert code == 0
+        captured = capsys.readouterr()
+        assert "Version   (/api/version):" in captured.out
+        assert "OpenCascade 7.9.3" in captured.out
+
