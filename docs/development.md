@@ -15,6 +15,19 @@ npm exec playwright install chromium
 npm exec playwright test
 ```
 
+Frontend typecheck and validation scripts:
+```bash
+npm run typecheck    # Strict TypeScript project check without emit
+npm run build        # Build production client bundle
+npm run preview      # Local preview of the production bundle
+```
+
+Automated performance benchmarking and operational verification:
+```bash
+python scripts/benchmark.py --base-url http://127.0.0.1:8000 --json
+python scripts/verify_health.py --base-url http://127.0.0.1:8000 --check-version
+```
+
 Optional quality tools: install `ruff`, `mypy` and `pip-audit` into the developer environment. Run `ruff check backend tests/test_platform.py --select F`, `ruff format --check backend`, and `mypy backend --ignore-missing-imports --follow-imports=silent`. MyPy's current pass is a baseline analysis, not strict annotation coverage of all CAD/native calls.
 
 Runtime audits: `npm audit --omit=dev` and `pip-audit -r requirements.txt`. These are time-specific dependency checks, not a guarantee that native or container vulnerabilities are absent.
