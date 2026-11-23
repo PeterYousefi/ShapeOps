@@ -35,6 +35,7 @@ def verify_service(
     base_url: str = "http://127.0.0.1:8000",
     timeout: float = 5.0,
     ready_only: bool = False,
+    check_version: bool = False,
 ) -> dict[str, Any]:
     """Execute operational health and readiness checks against a running ShapeOps server."""
     base = base_url.rstrip("/")
@@ -75,6 +76,18 @@ def verify_service(
         results["details"]["readiness"] = {"error": str(err), "ok": False}
         results["ready"] = False
 
+    # 3. Optional version probe
+    if check_version:
+        try:
+            status, body = fetch_json(f"{base}/api/version", timeout=timeout)
+            results["details"]["version"] = {
+                "status_code": status,
+                "body": body,
+                "ok": status == 200 and isinstance(body, dict),
+            }
+        except ConnectionError as err:
+            results["details"]["version"] = {"error": str(err), "ok": False}
+
     return results
 
 
@@ -99,6 +112,17 @@ def main(argv: list[str] | None = None) -> int:
         help="Only check readiness (/api/ready), skipping liveness check",
     )
     parser.add_argument(
+        "--check-version",
+        action="store_true",
+        help="Inspect application version and runtime metadata (/api/version)",
+    )
+    parser.add_argument(
+        "-q",
+        "--quiet",
+        action="store_true",
+        help="Quiet mode; suppress successful diagnostic output",
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         dest="json_output",
@@ -112,17 +136,20 @@ def main(argv: list[str] | None = None) -> int:
             base_url=args.base_url,
             timeout=args.timeout,
             ready_only=args.ready_only,
+            check_version=args.check_version,
         )
     except (ConnectionError, OSError, ValueError) as exc:
         if args.json_output:
             print(json.dumps({"error": str(exc), "healthy": False, "ready": False}, indent=2))
-        else:
+        elif not args.quiet:
             print(f"ERROR: Connection failure querying {args.base_url}: {exc}", file=sys.stderr)
         return 2
 
+    is_ok = report["ready"] and (args.ready_only or report["healthy"])
+
     if args.json_output:
         print(json.dumps(report, indent=2))
-    else:
+    elif not (args.quiet and is_ok):
         print("=== ShapeOps Service Health Report ===")
         print(f"Target URL: {report['base_url']}")
         if not args.ready_only:
@@ -142,7 +169,15 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  - Samples cached  : {checks.get('samples_cached', False)} ({samples_n} cached)")
             print(f"  - Telemetry SQLite: {checks.get('telemetry_db', False)}")
 
-    if not report["ready"] or (not args.ready_only and not report["healthy"]):
+        v_body = report["details"].get("version", {}).get("body")
+        if isinstance(v_body, dict):
+            print("Version   (/api/version):")
+            print(f"  - Application     : {v_body.get('app_name')} v{v_body.get('version')}")
+            print(f"  - CAD Engine      : {v_body.get('cad_engine')}")
+            print(f"  - Python Runtime  : {v_body.get('python_version')}")
+            print(f"  - Uptime          : {v_body.get('uptime_seconds', 0.0):.1f}s")
+
+    if not is_ok:
         return 1
     return 0
 
