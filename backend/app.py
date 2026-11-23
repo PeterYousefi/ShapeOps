@@ -474,6 +474,15 @@ def registry():
     return app.state.registry
 
 
+@app.get("/api/registry/models/{model_id}", response_model=RegisteredModel)
+def registered_model(model_id: str) -> RegisteredModel:
+    models = getattr(app.state, "registry", None) or []
+    for m in models:
+        if m.id == model_id:
+            return m
+    raise HTTPException(404, f"Model '{model_id}' not found in active registry")
+
+
 @app.get("/api/registry/runs", response_model=TrainingHistory)
 def training_runs(limit: int = Query(20, ge=1, le=100)):
     return {"origin": "Actual completed local baseline training runs", "runs": list_runs(REGISTRY_DB, limit)}
