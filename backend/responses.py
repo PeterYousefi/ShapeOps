@@ -370,3 +370,16 @@ class SampleMetadata(OutputModel):
         if sum(self.surface_distribution.values()) != self.face_count:
             raise ValueError('Surface distribution counts must equal face_count')
         return self
+
+
+class VersionResponse(OutputModel):
+    version: str
+    app_name: str
+    cad_engine: str
+    python_version: str
+    os_platform: str
+    models_count: Annotated[int, Field(ge=0)]
+    samples_count: Annotated[int, Field(ge=0)]
+    uptime_seconds: Nonnegative
+    status: Literal["operational", "degraded"]
+

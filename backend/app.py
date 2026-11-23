@@ -1,7 +1,7 @@
-import asyncio, csv, io, json, logging, os, sqlite3, subprocess, sys, tempfile, time, uuid
+import asyncio, csv, io, json, logging, os, platform, sqlite3, subprocess, sys, tempfile, time, uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import cast
+from typing import Literal, cast
 import stat
 import numpy as np
 import cadquery as cq
@@ -18,10 +18,11 @@ from backend.contracts import Geometry, validate_geometry
 from backend.registry import list_runs, get_run, list_failures
 from backend.drift import observation as drift_observation
 from backend.job_history import list_jobs, get_job, HistoryCapacityError
-from backend.responses import InferenceResult, TelemetryResponse, OperationsResponse, DrillResult, RegisteredModel, TrainingHistory, TrainingRunDetail, TrainingFailureHistory, CandidateJob, CandidateJobHistory, DriftHistory, DriftObservation, ReadinessChecks, ReadinessResponse, SampleMetadata
+from backend.responses import InferenceResult, TelemetryResponse, OperationsResponse, DrillResult, RegisteredModel, TrainingHistory, TrainingRunDetail, TrainingFailureHistory, CandidateJob, CandidateJobHistory, DriftHistory, DriftObservation, ReadinessChecks, ReadinessResponse, SampleMetadata, VersionResponse
 
 logger = logging.getLogger("shapeops")
 logging.basicConfig(level=logging.INFO, format="%(message)s")
+APP_START_TIME = time.time()
 DB = (
     Path(os.environ.get("SHAPEOPS_DATA_DIR", str(ROOT / ".runtime")))
     / "telemetry.sqlite"
@@ -275,6 +276,28 @@ def readiness():
     if not ready:
         return JSONResponse(status_code=503, content=payload.model_dump())
     return payload
+
+
+@app.get("/api/version", response_model=VersionResponse)
+def version():
+    models = getattr(app.state, "models", None) or {}
+    samples = getattr(app.state, "samples", None) or {}
+    models_n = len(models)
+    samples_n = len(samples)
+    status: Literal["operational", "degraded"] = (
+        "operational" if models_n > 0 and samples_n == len(SAMPLES) else "degraded"
+    )
+    return VersionResponse(
+        version="0.1.0",
+        app_name="ShapeOps",
+        cad_engine="OpenCascade 7.9.3",
+        python_version=platform.python_version(),
+        os_platform=platform.platform(),
+        models_count=models_n,
+        samples_count=samples_n,
+        uptime_seconds=max(0.0, float(time.time() - APP_START_TIME)),
+        status=status,
+    )
 
 
 @app.get("/api/samples")
