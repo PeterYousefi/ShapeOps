@@ -175,6 +175,7 @@ def test_main_cli_ready_only_flag():
             ready_only=True,
             check_version=False,
             check_metrics=False,
+            check_samples=False,
         )
 
 
@@ -309,5 +310,55 @@ def test_main_cli_check_metrics_flag(capsys):
         assert "Metrics   (/metrics)   :" in captured.out
         assert "Active models   : 2" in captured.out
         assert "Process uptime  : 123.45s" in captured.out
+
+
+def test_verify_service_with_samples_check():
+    def mock_fetch(url: str, timeout: float = 5.0):
+        if url.endswith("/api/health"):
+            return 200, {"status": "healthy"}
+        if url.endswith("/api/ready"):
+            return 200, {"ready": True}
+        if url.endswith("/api/samples"):
+            return 200, [
+                {"id": "bracket", "name": "Mounting bracket"},
+                {"id": "flange", "name": "Bearing flange"},
+            ]
+        return 404, {}
+
+    with patch.object(probe, "fetch_json", side_effect=mock_fetch):
+        report = probe.verify_service("http://mocked", check_samples=True)
+        assert report["healthy"] is True
+        assert report["ready"] is True
+        assert report["details"]["samples"]["ok"] is True
+        samples = report["details"]["samples"]["body"]
+        assert len(samples) == 2
+        assert samples[0]["id"] == "bracket"
+
+
+def test_main_cli_check_samples_flag(capsys):
+    healthy_report = {
+        "base_url": "http://127.0.0.1:8000",
+        "healthy": True,
+        "ready": True,
+        "details": {
+            "health": {"ok": True, "status_code": 200, "body": {"status": "healthy"}},
+            "readiness": {"ok": True, "status_code": 200, "body": {"ready": True}},
+            "samples": {
+                "ok": True,
+                "body": [
+                    {"id": "bracket", "name": "Mounting bracket"},
+                    {"id": "flange", "name": "Bearing flange"},
+                ],
+            },
+        },
+    }
+    with patch.object(probe, "verify_service", return_value=healthy_report):
+        code = probe.main(["--check-samples"])
+        assert code == 0
+        captured = capsys.readouterr()
+        assert "Samples   (/api/samples):" in captured.out
+        assert "- bracket: Mounting bracket" in captured.out
+        assert "- flange: Bearing flange" in captured.out
+
 
 

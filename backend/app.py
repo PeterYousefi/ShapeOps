@@ -18,7 +18,7 @@ from backend.contracts import Geometry, validate_geometry
 from backend.registry import list_runs, get_run, list_failures
 from backend.drift import observation as drift_observation
 from backend.job_history import list_jobs, get_job, HistoryCapacityError
-from backend.responses import InferenceResult, TelemetryResponse, OperationsResponse, DrillResult, RegisteredModel, TrainingHistory, TrainingRunDetail, TrainingFailureHistory, CandidateJob, CandidateJobHistory, DriftHistory, DriftObservation, ReadinessChecks, ReadinessResponse, SampleMetadata, VersionResponse, RequestRecord
+from backend.responses import InferenceResult, TelemetryResponse, OperationsResponse, DrillResult, RegisteredModel, TrainingHistory, TrainingRunDetail, TrainingFailureHistory, CandidateJob, CandidateJobHistory, DriftHistory, DriftObservation, ReadinessChecks, ReadinessResponse, SampleEntry, SampleMetadata, VersionResponse, RequestRecord
 
 logger = logging.getLogger("shapeops")
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -306,6 +306,14 @@ def version():
 @app.get("/api/samples")
 def samples():
     return SAMPLES
+
+
+@app.get("/api/samples/{key}", response_model=SampleEntry)
+def sample_entry(key: str) -> SampleEntry:
+    entry = next((s for s in SAMPLES if s["id"] == key), None)
+    if entry is None or key not in getattr(app.state, "samples", {}):
+        raise HTTPException(404, f"Sample '{key}' not found")
+    return SampleEntry.model_validate(entry)
 
 
 @app.get("/api/samples/{key}/metadata", response_model=SampleMetadata)
@@ -641,6 +649,9 @@ def metrics() -> Response:
         "# HELP shapeops_registered_models_total Number of registered inference models loaded in runtime",
         "# TYPE shapeops_registered_models_total gauge",
         f"shapeops_registered_models_total {len(getattr(app.state, 'registry', []) or [])}",
+        "# HELP shapeops_cached_samples_total Number of pre-computed CAD reference samples in memory",
+        "# TYPE shapeops_cached_samples_total gauge",
+        f"shapeops_cached_samples_total {len(getattr(app.state, 'samples', {}) or {})}",
         "# HELP shapeops_process_uptime_seconds Total runtime in seconds since application initialization",
         "# TYPE shapeops_process_uptime_seconds gauge",
         f"shapeops_process_uptime_seconds {max(0.0, float(time.time() - APP_START_TIME)):.2f}",
