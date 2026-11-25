@@ -13,6 +13,10 @@ Implementation references: [FastAPI response models](https://fastapi.tiangolo.co
 
 Telemetry and Prometheus now share a validated TelemetryResponse window. Counts must match the retained rows, flags/probabilities/timings must be finite and bounded, and successful-request percentile/OOD metrics remain null when no successful requests exist. Populated windows require consistent percentile ordering and OOD rate. Existing retained-window gauges and JSON field names remain unchanged; this is not lifetime production telemetry.
 
+Single request trace lookup at `GET /api/telemetry/requests/{trace_id}` retrieves the stored `RequestRecord` for a specific correlation ID (`trace_id` or `X-Request-ID`). The response schema validates request timestamps, model identity, source classification (`sample` or `upload`), inference latency, face count, and drift screening metrics. If the requested trace ID is not found in the local telemetry SQLite store, the endpoint responds with HTTP 404 Not Found.
+
+Prometheus exposition at `GET /metrics` also includes the `shapeops_process_uptime_seconds` gauge, which tracks the continuous elapsed runtime in seconds since API process startup.
+
 OperationsResponse and DrillResult document the actual local-only state and isolated check results. Drill summaries must match their executed checks and validate before SQLite persistence. The current response contract allows no production release history and retains Not deployed status; promotion remains independently blocked with HTTP 403. This schema is not an implementation of authenticated administrative controls. Stored drill results are validated when read; corrupt/partial records fail instead of being silently filled with fabricated defaults. The old retention test fixture was updated to a complete, explicitly labeled unit drill record.
 
 
