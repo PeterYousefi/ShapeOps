@@ -4,13 +4,14 @@
 
 - `GET /api/health` confirms the API process is alive.
 - `GET /api/ready` verifies full runtime readiness across three checks (`models_loaded`, `samples_cached`, and `telemetry_db`). Returns HTTP `200` when all dependencies are initialized, or HTTP `503` with structured component diagnostics if any check fails.
+- `GET /api/samples/{key}` returns individual procedural sample catalog entries (`id`, `name`, `description`).
 - `GET /api/samples/{key}/metadata` returns lightweight cached B-Rep geometry metadata (`face_count`, `edge_count`, `volume`, `total_surface_area`, `bounds`, and `surface_distribution`) without triggering inference or mutating telemetry.
 
 Actual inference failures are classified as validation errors or processing timeouts. Match `X-Request-ID` with JSON inference events and the request explorer. Never copy private CAD into logs or bug reports. Raw upload cleanup is tested on the genuine subprocess path.
 
 ## Telemetry export and Prometheus exposition
 
-- `GET /metrics` exposes Prometheus-compatible gauges including process uptime (`shapeops_process_uptime_seconds`), request counts (`shapeops_inference_requests`), trailing-minute throughput (`shapeops_inference_throughput_per_minute`), registered model count (`shapeops_registered_models_total`), latency quantiles (`shapeops_inference_latency_p50_ms`, `shapeops_inference_latency_p95_ms`), OOD rate (`shapeops_inference_ood_rate`), and per-model breakdowns (`shapeops_inference_requests_by_model`).
+- `GET /metrics` exposes Prometheus-compatible gauges including process uptime (`shapeops_process_uptime_seconds`), registered model count (`shapeops_registered_models_total`), cached reference sample count (`shapeops_cached_samples_total`), request counts (`shapeops_inference_requests`), trailing-minute throughput (`shapeops_inference_throughput_per_minute`), latency quantiles (`shapeops_inference_latency_p50_ms`, `shapeops_inference_latency_p95_ms`), OOD rate (`shapeops_inference_ood_rate`), and per-model breakdowns (`shapeops_inference_requests_by_model`).
 - `GET /api/telemetry/requests/{trace_id}` enables operators to inspect an individual inference request record by its correlation or trace identifier without downloading bulk logs.
 - `GET /api/telemetry/export.csv?limit=500` downloads retained request telemetry as UTF-8 CSV (bounded 1–1,000 rows, `Cache-Control: no-store`) with spreadsheet formula-injection neutralization applied to string fields.
 
