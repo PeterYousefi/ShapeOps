@@ -50,6 +50,7 @@ def verify_service(
     ready_only: bool = False,
     check_version: bool = False,
     check_metrics: bool = False,
+    check_samples: bool = False,
 ) -> dict[str, Any]:
     """Execute operational health and readiness checks against a running ShapeOps server."""
     base = base_url.rstrip("/")
@@ -121,6 +122,18 @@ def verify_service(
         except ConnectionError as err:
             results["details"]["metrics"] = {"error": str(err), "ok": False}
 
+    # 5. Optional samples probe
+    if check_samples:
+        try:
+            status, body = fetch_json(f"{base}/api/samples", timeout=timeout)
+            results["details"]["samples"] = {
+                "status_code": status,
+                "body": body,
+                "ok": status == 200 and isinstance(body, list) and len(body) > 0,
+            }
+        except ConnectionError as err:
+            results["details"]["samples"] = {"error": str(err), "ok": False}
+
     return results
 
 
@@ -155,6 +168,11 @@ def main(argv: list[str] | None = None) -> int:
         help="Scrape and inspect Prometheus exposition metrics (/metrics)",
     )
     parser.add_argument(
+        "--check-samples",
+        action="store_true",
+        help="Inspect procedural reference CAD sample catalog (/api/samples)",
+    )
+    parser.add_argument(
         "-q",
         "--quiet",
         action="store_true",
@@ -176,6 +194,7 @@ def main(argv: list[str] | None = None) -> int:
             ready_only=args.ready_only,
             check_version=args.check_version,
             check_metrics=args.check_metrics,
+            check_samples=args.check_samples,
         )
     except (ConnectionError, OSError, ValueError) as exc:
         if args.json_output:
@@ -222,6 +241,14 @@ def main(argv: list[str] | None = None) -> int:
             print("Metrics   (/metrics)   :")
             print(f"  - Active models   : {m_data.get('shapeops_registered_models_total', 'N/A')}")
             print(f"  - Process uptime  : {m_data.get('shapeops_process_uptime_seconds', 'N/A')}s")
+
+        s_details = report["details"].get("samples")
+        if isinstance(s_details, dict) and s_details.get("ok"):
+            s_list = s_details.get("body", [])
+            print("Samples   (/api/samples):")
+            for item in s_list:
+                if isinstance(item, dict):
+                    print(f"  - {item.get('id')}: {item.get('name')}")
 
     if not is_ok:
         return 1
