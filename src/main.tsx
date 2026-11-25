@@ -2518,6 +2518,11 @@ function App() {
                       ],
                       [
                         "GET",
+                        "/api/samples/{key}",
+                        "Single sample catalog entry and description lookup",
+                      ],
+                      [
+                        "GET",
                         "/api/samples/{key}/metadata",
                         "Lightweight cached CAD geometry metadata",
                       ],
