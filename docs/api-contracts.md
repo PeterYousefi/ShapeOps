@@ -41,6 +41,8 @@ DriftHistory at GET /api/drift exposes actual retained local geometry screening.
 
 ReadinessResponse at `GET /api/ready` documents live runtime readiness checks for container orchestrators and health monitors. Unlike the shallow `/api/health` process liveness check, readiness evaluates: (1) whether model instances are actively initialized in application state, (2) whether all pre-computed CAD sample geometries are cached and ready for zero-latency inference, and (3) whether the local SQLite telemetry store is reachable and writable. When all conditions are satisfied, it returns HTTP 200 with typed boolean breakdown `ReadinessChecks`; if any check is unfulfilled, it responds with HTTP 503 Service Unavailable.
 
+SampleEntry at `GET /api/samples/{key}` provides typed catalog lookup for procedural reference CAD parts, returning `id`, `name`, and human-readable feature `description`. If the specified sample key is not found or not initialized in memory, the endpoint responds with HTTP 404 Not Found.
+
 SampleMetadata at `GET /api/samples/{key}/metadata` provides lightweight structural inspection for procedural reference parts prior to requesting full mesh buffers. It exposes `key`, human-readable `label`, `face_count`, `vertex_count`, `triangle_count`, uncompressed `byte_size`, and axis-aligned 3D `bounding_box` dimensions. Invalid sample keys return HTTP 404 Not Found.
 
 Sample STEP downloads at `GET /api/samples/{key}/download` stream real procedural ISO-10303 STEP CAD part files (`application/step`). Because reference geometry is deterministic and immutable, responses include `Cache-Control: public, max-age=86400, immutable` headers to avoid redundant surface re-tessellation and file serialization across client sessions.

@@ -266,6 +266,21 @@ This increment delivers single request telemetry trace inspection, runtime Prome
 9. `docs/operations.md`: Documented Prometheus uptime monitoring and single trace operator diagnostics.
 10. `docs/progress.md`: Recorded delivery of telemetry trace inspection and Prometheus uptime metrics.
 
+## Sample catalog lookup and Prometheus sample metrics
+
+This increment delivers single sample catalog inspection, Prometheus cached-sample gauge exposition, and CLI health verification tooling:
+1. `backend/responses.py`: Defined typed `SampleEntry` response model for sample catalog item serialization.
+2. `backend/app.py`: Implemented `GET /api/samples/{key}` endpoint returning individual `SampleEntry` schemas with 404 handling.
+3. `tests/test_sample_lookup.py`: Created unit and contract test suite verifying sample lookup status codes, response schemas, and 404 behavior.
+4. `backend/app.py`: Added `shapeops_cached_samples_total` Prometheus gauge to `GET /metrics` tracking pre-computed CAD reference samples in memory.
+5. `tests/test_metrics_prometheus.py`: Added tests asserting presence and value of `shapeops_cached_samples_total`.
+6. `scripts/verify_health.py`: Added `--check-samples` CLI flag enabling operators to inspect procedural reference CAD sample catalogs.
+7. `tests/test_health_check_cli.py`: Added unit test coverage for `--check-samples` verification in the health check CLI.
+8. `src/main.tsx`: Surfaced `GET /api/samples/{key}` in the interactive documentation reference.
+9. `docs/api-contracts.md` & `docs/operations.md`: Documented `SampleEntry` contract and `shapeops_cached_samples_total` gauge.
+10. `docs/progress.md`: Recorded delivery of sample catalog inspection and Prometheus sample metrics.
+
+
 
 
 

@@ -354,6 +354,12 @@ class ReadinessResponse(OutputModel):
         return self
 
 
+class SampleEntry(OutputModel):
+    id: str
+    name: str
+    description: str
+
+
 class SampleMetadata(OutputModel):
     id: str
     name: str
