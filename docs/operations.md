@@ -10,7 +10,8 @@ Actual inference failures are classified as validation errors or processing time
 
 ## Telemetry export and Prometheus exposition
 
-- `GET /metrics` exposes Prometheus-compatible gauges including request counts (`shapeops_inference_requests`), trailing-minute throughput (`shapeops_inference_throughput_per_minute`), registered model count (`shapeops_registered_models_total`), latency quantiles (`shapeops_inference_latency_p50_ms`, `shapeops_inference_latency_p95_ms`), OOD rate (`shapeops_inference_ood_rate`), and per-model breakdowns (`shapeops_inference_requests_by_model`).
+- `GET /metrics` exposes Prometheus-compatible gauges including process uptime (`shapeops_process_uptime_seconds`), request counts (`shapeops_inference_requests`), trailing-minute throughput (`shapeops_inference_throughput_per_minute`), registered model count (`shapeops_registered_models_total`), latency quantiles (`shapeops_inference_latency_p50_ms`, `shapeops_inference_latency_p95_ms`), OOD rate (`shapeops_inference_ood_rate`), and per-model breakdowns (`shapeops_inference_requests_by_model`).
+- `GET /api/telemetry/requests/{trace_id}` enables operators to inspect an individual inference request record by its correlation or trace identifier without downloading bulk logs.
 - `GET /api/telemetry/export.csv?limit=500` downloads retained request telemetry as UTF-8 CSV (bounded 1–1,000 rows, `Cache-Control: no-store`) with spreadsheet formula-injection neutralization applied to string fields.
 
 ## Incident drill
