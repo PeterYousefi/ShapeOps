@@ -31,11 +31,25 @@ def fetch_json(url: str, timeout: float = 5.0) -> tuple[int, dict[str, Any] | st
         raise ConnectionError(f"Failed to reach {url}: {e.reason}") from e
 
 
+def fetch_text(url: str, timeout: float = 5.0) -> tuple[int, str]:
+    """Fetch raw text from a GET endpoint, returning (status_code, body)."""
+    req = Request(url, headers={"Accept": "text/plain", "User-Agent": "ShapeOps-HealthCheck/1.0"})
+    try:
+        with urlopen(req, timeout=timeout) as response:
+            return response.getcode(), response.read().decode("utf-8")
+    except HTTPError as e:
+        raw = e.read().decode("utf-8") if e.fp else ""
+        return e.code, raw
+    except URLError as e:
+        raise ConnectionError(f"Failed to reach {url}: {e.reason}") from e
+
+
 def verify_service(
     base_url: str = "http://127.0.0.1:8000",
     timeout: float = 5.0,
     ready_only: bool = False,
     check_version: bool = False,
+    check_metrics: bool = False,
 ) -> dict[str, Any]:
     """Execute operational health and readiness checks against a running ShapeOps server."""
     base = base_url.rstrip("/")
@@ -88,6 +102,25 @@ def verify_service(
         except ConnectionError as err:
             results["details"]["version"] = {"error": str(err), "ok": False}
 
+    # 4. Optional metrics probe
+    if check_metrics:
+        try:
+            status, raw_text = fetch_text(f"{base}/metrics", timeout=timeout)
+            parsed_metrics: dict[str, str] = {}
+            for line in raw_text.splitlines():
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        parsed_metrics[parts[0]] = parts[1]
+            results["details"]["metrics"] = {
+                "status_code": status,
+                "metrics": parsed_metrics,
+                "ok": status == 200 and "shapeops_process_uptime_seconds" in parsed_metrics,
+            }
+        except ConnectionError as err:
+            results["details"]["metrics"] = {"error": str(err), "ok": False}
+
     return results
 
 
@@ -117,6 +150,11 @@ def main(argv: list[str] | None = None) -> int:
         help="Inspect application version and runtime metadata (/api/version)",
     )
     parser.add_argument(
+        "--check-metrics",
+        action="store_true",
+        help="Scrape and inspect Prometheus exposition metrics (/metrics)",
+    )
+    parser.add_argument(
         "-q",
         "--quiet",
         action="store_true",
@@ -137,6 +175,7 @@ def main(argv: list[str] | None = None) -> int:
             timeout=args.timeout,
             ready_only=args.ready_only,
             check_version=args.check_version,
+            check_metrics=args.check_metrics,
         )
     except (ConnectionError, OSError, ValueError) as exc:
         if args.json_output:
@@ -176,6 +215,13 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  - CAD Engine      : {v_body.get('cad_engine')}")
             print(f"  - Python Runtime  : {v_body.get('python_version')}")
             print(f"  - Uptime          : {v_body.get('uptime_seconds', 0.0):.1f}s")
+
+        m_details = report["details"].get("metrics")
+        if isinstance(m_details, dict) and m_details.get("ok"):
+            m_data = m_details.get("metrics", {})
+            print("Metrics   (/metrics)   :")
+            print(f"  - Active models   : {m_data.get('shapeops_registered_models_total', 'N/A')}")
+            print(f"  - Process uptime  : {m_data.get('shapeops_process_uptime_seconds', 'N/A')}s")
 
     if not is_ok:
         return 1
