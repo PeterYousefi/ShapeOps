@@ -252,5 +252,20 @@ This increment delivers model registry lookup endpoints, performance benchmarkin
 8. `docs/api-contracts.md`: Documented `GET /api/registry/models/{model_id}` contract and STEP download caching semantics.
 9. `docs/development.md`: Updated developer guide with benchmarking CLI usage and frontend npm verification commands.
 
+## Telemetry request trace lookup and Prometheus uptime metrics
+
+This increment delivers single request telemetry trace inspection, runtime Prometheus uptime monitoring, and CLI verification tooling:
+1. `backend/app.py`: Implemented `GET /api/telemetry/requests/{trace_id}` endpoint returning individual stored `RequestRecord` instances with 404 handling for unknown trace identifiers.
+2. `tests/test_telemetry_request.py`: Added unit and contract tests verifying single trace lookup status codes, response schemas, and 404 behavior.
+3. `backend/app.py`: Added `shapeops_process_uptime_seconds` Prometheus gauge to `GET /metrics` tracking elapsed process runtime.
+4. `tests/test_metrics_prometheus.py`: Added tests asserting presence and positive float value of `shapeops_process_uptime_seconds`.
+5. `scripts/verify_health.py`: Added `--check-metrics` CLI flag allowing operators to scrape and verify Prometheus metric exposition.
+6. `tests/test_health_check_cli.py`: Added unit test coverage for `--check-metrics` verification in the health check CLI.
+7. `src/main.tsx`: Surfaced single telemetry request lookup and model registry endpoints in the interactive documentation reference.
+8. `docs/api-contracts.md`: Documented `GET /api/telemetry/requests/{trace_id}` response contract and Prometheus uptime gauge.
+9. `docs/operations.md`: Documented Prometheus uptime monitoring and single trace operator diagnostics.
+10. `docs/progress.md`: Recorded delivery of telemetry trace inspection and Prometheus uptime metrics.
+
+
 
 
