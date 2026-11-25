@@ -18,7 +18,7 @@ from backend.contracts import Geometry, validate_geometry
 from backend.registry import list_runs, get_run, list_failures
 from backend.drift import observation as drift_observation
 from backend.job_history import list_jobs, get_job, HistoryCapacityError
-from backend.responses import InferenceResult, TelemetryResponse, OperationsResponse, DrillResult, RegisteredModel, TrainingHistory, TrainingRunDetail, TrainingFailureHistory, CandidateJob, CandidateJobHistory, DriftHistory, DriftObservation, ReadinessChecks, ReadinessResponse, SampleMetadata, VersionResponse, RequestRecord
+from backend.responses import InferenceResult, TelemetryResponse, OperationsResponse, DrillResult, RegisteredModel, TrainingHistory, TrainingRunDetail, TrainingFailureHistory, CandidateJob, CandidateJobHistory, DriftHistory, DriftObservation, ReadinessChecks, ReadinessResponse, SampleEntry, SampleMetadata, VersionResponse, RequestRecord
 
 logger = logging.getLogger("shapeops")
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -306,6 +306,14 @@ def version():
 @app.get("/api/samples")
 def samples():
     return SAMPLES
+
+
+@app.get("/api/samples/{key}", response_model=SampleEntry)
+def sample_entry(key: str) -> SampleEntry:
+    entry = next((s for s in SAMPLES if s["id"] == key), None)
+    if entry is None or key not in getattr(app.state, "samples", {}):
+        raise HTTPException(404, f"Sample '{key}' not found")
+    return SampleEntry.model_validate(entry)
 
 
 @app.get("/api/samples/{key}/metadata", response_model=SampleMetadata)
