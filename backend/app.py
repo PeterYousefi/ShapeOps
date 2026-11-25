@@ -18,7 +18,7 @@ from backend.contracts import Geometry, validate_geometry
 from backend.registry import list_runs, get_run, list_failures
 from backend.drift import observation as drift_observation
 from backend.job_history import list_jobs, get_job, HistoryCapacityError
-from backend.responses import InferenceResult, TelemetryResponse, OperationsResponse, DrillResult, RegisteredModel, TrainingHistory, TrainingRunDetail, TrainingFailureHistory, CandidateJob, CandidateJobHistory, DriftHistory, DriftObservation, ReadinessChecks, ReadinessResponse, SampleMetadata, VersionResponse
+from backend.responses import InferenceResult, TelemetryResponse, OperationsResponse, DrillResult, RegisteredModel, TrainingHistory, TrainingRunDetail, TrainingFailureHistory, CandidateJob, CandidateJobHistory, DriftHistory, DriftObservation, ReadinessChecks, ReadinessResponse, SampleMetadata, VersionResponse, RequestRecord
 
 logger = logging.getLogger("shapeops")
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -552,6 +552,16 @@ def telemetry() -> TelemetryResponse:
         "requests": rows,
         "throughput_per_minute": sum(r["at"] > time.time() - 60 for r in rows),
     })
+
+
+@app.get("/api/telemetry/requests/{trace_id}", response_model=RequestRecord)
+def telemetry_request(trace_id: str):
+    with connection() as db:
+        prune_records(db)
+        row = db.execute("SELECT * FROM requests WHERE id = ?", (trace_id,)).fetchone()
+    if row is None:
+        raise HTTPException(404, f"Request '{trace_id}' not found in retained telemetry")
+    return RequestRecord.model_validate(dict(row))
 
 
 def _sanitize_csv_cell(value: object) -> str:
