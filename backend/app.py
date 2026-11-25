@@ -641,6 +641,9 @@ def metrics() -> Response:
         "# HELP shapeops_registered_models_total Number of registered inference models loaded in runtime",
         "# TYPE shapeops_registered_models_total gauge",
         f"shapeops_registered_models_total {len(getattr(app.state, 'registry', []) or [])}",
+        "# HELP shapeops_process_uptime_seconds Total runtime in seconds since application initialization",
+        "# TYPE shapeops_process_uptime_seconds gauge",
+        f"shapeops_process_uptime_seconds {max(0.0, float(time.time() - APP_START_TIME)):.2f}",
     ]
     if t.p50 is not None:
         lines.extend(
