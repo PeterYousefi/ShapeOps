@@ -2527,6 +2527,11 @@ function App() {
                         "Actual trained estimator records",
                       ],
                       [
+                        "GET",
+                        "/api/registry/models/{model_id}",
+                        "Single model card and validation metadata lookup",
+                      ],
+                      [
                         "POST",
                         "/api/inference/sample",
                         "Sample solid inference",
@@ -2540,6 +2545,11 @@ function App() {
                         "GET",
                         "/api/telemetry",
                         "Retained runtime request metrics",
+                      ],
+                      [
+                        "GET",
+                        "/api/telemetry/requests/{trace_id}",
+                        "Single request telemetry record inspection by trace ID",
                       ],
                       [
                         "GET",

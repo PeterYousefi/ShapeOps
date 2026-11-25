@@ -18,7 +18,7 @@ from backend.contracts import Geometry, validate_geometry
 from backend.registry import list_runs, get_run, list_failures
 from backend.drift import observation as drift_observation
 from backend.job_history import list_jobs, get_job, HistoryCapacityError
-from backend.responses import InferenceResult, TelemetryResponse, OperationsResponse, DrillResult, RegisteredModel, TrainingHistory, TrainingRunDetail, TrainingFailureHistory, CandidateJob, CandidateJobHistory, DriftHistory, DriftObservation, ReadinessChecks, ReadinessResponse, SampleMetadata, VersionResponse
+from backend.responses import InferenceResult, TelemetryResponse, OperationsResponse, DrillResult, RegisteredModel, TrainingHistory, TrainingRunDetail, TrainingFailureHistory, CandidateJob, CandidateJobHistory, DriftHistory, DriftObservation, ReadinessChecks, ReadinessResponse, SampleMetadata, VersionResponse, RequestRecord
 
 logger = logging.getLogger("shapeops")
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -554,6 +554,16 @@ def telemetry() -> TelemetryResponse:
     })
 
 
+@app.get("/api/telemetry/requests/{trace_id}", response_model=RequestRecord)
+def telemetry_request(trace_id: str):
+    with connection() as db:
+        prune_records(db)
+        row = db.execute("SELECT * FROM requests WHERE id = ?", (trace_id,)).fetchone()
+    if row is None:
+        raise HTTPException(404, f"Request '{trace_id}' not found in retained telemetry")
+    return RequestRecord.model_validate(dict(row))
+
+
 def _sanitize_csv_cell(value: object) -> str:
     text = "" if value is None else str(value)
     if text and text[0] in ("=", "+", "-", "@", "\t", "\r"):
@@ -631,6 +641,9 @@ def metrics() -> Response:
         "# HELP shapeops_registered_models_total Number of registered inference models loaded in runtime",
         "# TYPE shapeops_registered_models_total gauge",
         f"shapeops_registered_models_total {len(getattr(app.state, 'registry', []) or [])}",
+        "# HELP shapeops_process_uptime_seconds Total runtime in seconds since application initialization",
+        "# TYPE shapeops_process_uptime_seconds gauge",
+        f"shapeops_process_uptime_seconds {max(0.0, float(time.time() - APP_START_TIME)):.2f}",
     ]
     if t.p50 is not None:
         lines.extend(
