@@ -174,6 +174,7 @@ def test_main_cli_ready_only_flag():
             timeout=5.0,
             ready_only=True,
             check_version=False,
+            check_metrics=False,
         )
 
 
@@ -253,4 +254,60 @@ def test_main_cli_check_version_flag(capsys):
         captured = capsys.readouterr()
         assert "Version   (/api/version):" in captured.out
         assert "OpenCascade 7.9.3" in captured.out
+
+
+def test_verify_service_with_metrics_check():
+    def mock_fetch_json(url: str, timeout: float = 5.0):
+        if url.endswith("/api/health"):
+            return 200, {"status": "healthy"}
+        if url.endswith("/api/ready"):
+            return 200, {"ready": True, "checks": {"models_loaded": True, "samples_cached": True, "telemetry_db": True}}
+        return 404, {}
+
+    mock_metrics_text = (
+        "# HELP shapeops_registered_models_total Number of models\n"
+        "# TYPE shapeops_registered_models_total gauge\n"
+        "shapeops_registered_models_total 2\n"
+        "# HELP shapeops_process_uptime_seconds Uptime\n"
+        "shapeops_process_uptime_seconds 99.5\n"
+    )
+
+    with (
+        patch.object(probe, "fetch_json", side_effect=mock_fetch_json),
+        patch.object(probe, "fetch_text", return_value=(200, mock_metrics_text)),
+    ):
+        report = probe.verify_service("http://mocked", check_metrics=True)
+        assert report["healthy"] is True
+        assert report["ready"] is True
+        assert report["details"]["metrics"]["ok"] is True
+        m = report["details"]["metrics"]["metrics"]
+        assert m["shapeops_registered_models_total"] == "2"
+        assert m["shapeops_process_uptime_seconds"] == "99.5"
+
+
+def test_main_cli_check_metrics_flag(capsys):
+    healthy_report = {
+        "base_url": "http://127.0.0.1:8000",
+        "healthy": True,
+        "ready": True,
+        "details": {
+            "health": {"ok": True, "status_code": 200, "body": {"status": "healthy"}},
+            "readiness": {"ok": True, "status_code": 200, "body": {"ready": True}},
+            "metrics": {
+                "ok": True,
+                "metrics": {
+                    "shapeops_registered_models_total": "2",
+                    "shapeops_process_uptime_seconds": "123.45",
+                },
+            },
+        },
+    }
+    with patch.object(probe, "verify_service", return_value=healthy_report):
+        code = probe.main(["--check-metrics"])
+        assert code == 0
+        captured = capsys.readouterr()
+        assert "Metrics   (/metrics)   :" in captured.out
+        assert "Active models   : 2" in captured.out
+        assert "Process uptime  : 123.45s" in captured.out
+
 
