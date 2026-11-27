@@ -766,6 +766,19 @@ async def drill(request: Request) -> DrillResult:
     return result
 
 
+@app.get("/api/operations/drills/{drill_id}", response_model=DrillResult)
+def operation_drill(drill_id: str) -> DrillResult:
+    with connection() as db:
+        prune_records(db)
+        row = db.execute("SELECT result FROM drills WHERE id = ?", (drill_id,)).fetchone()
+    if row is None:
+        raise HTTPException(404, f"Drill '{drill_id}' not found in retained operations history")
+    try:
+        return DrillResult.model_validate(json.loads(row["result"]))
+    except (ValueError, json.JSONDecodeError):
+        raise HTTPException(500, "Corrupt drill record in local database")
+
+
 @app.post("/api/operations/promote")
 def promote(request: Request):
     auth_header = request.headers.get("Authorization")
