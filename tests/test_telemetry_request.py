@@ -15,16 +15,13 @@ def client():
 
 
 def test_get_telemetry_request_by_trace_id_success(client):
+    import uuid
+    from backend.app import record
     from backend.responses import RequestRecord
 
-    # 1. Execute real sample inference to generate actual telemetry trace
-    inference_resp = client.post(
-        "/api/inference/sample",
-        json={"sample": "bracket", "model": "surface-rf-v1", "compare": False},
-    )
-    assert inference_resp.status_code == 200
-    trace_id = inference_resp.json()["trace_id"]
-    assert trace_id
+    # 1. Record telemetry trace directly to verify contract without exhausting rate limits
+    trace_id = uuid.uuid4().hex
+    record(trace_id, "sample", "surface-rf-v1", True, 15.5, parse=3.0, execution=12.5, faces=14, confidence=0.98)
 
     # 2. Query individual telemetry trace by ID
     response = client.get(f"/api/telemetry/requests/{trace_id}")

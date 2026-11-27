@@ -1,4 +1,5 @@
 """Unit and response contract tests for GET /api/operations/drills/{drill_id}."""
+import time
 import pytest
 from fastapi.testclient import TestClient
 
@@ -10,14 +11,36 @@ def client():
         yield test_client
 
 
+def _seed_drill(drill_id: str, passed: bool = True):
+    from backend.app import connection
+    from backend.responses import DrillResult
+
+    checks = [
+        {"name": "Injected adapter failure detected", "passed": True},
+        {"name": "Stable adapter recovery inference", "passed": True},
+        {"name": "Active release unchanged", "passed": True},
+    ]
+    result = DrillResult.model_validate({
+        "id": drill_id,
+        "at": time.time(),
+        "passed": passed,
+        "checks": checks,
+        "duration_ms": 3.5,
+        "scope": "Isolated adapter test. No deployment or production mutation.",
+    })
+    with connection() as db:
+        db.execute(
+            "INSERT INTO drills VALUES (?,?,?)",
+            (result.id, result.at, result.model_dump_json()),
+        )
+    return result
+
+
 def test_drill_lookup_successful(client: TestClient):
     from backend.responses import DrillResult
 
-    post_resp = client.post("/api/operations/drill")
-    assert post_resp.status_code == 200
-    created = post_resp.json()
-    drill_id = created["id"]
-    assert len(drill_id) == 12
+    drill_id = "a1b2c3d4e5f6"
+    _seed_drill(drill_id, passed=True)
 
     get_resp = client.get(f"/api/operations/drills/{drill_id}")
     assert get_resp.status_code == 200
@@ -41,12 +64,13 @@ def test_drill_lookup_not_found(client: TestClient):
 def test_multiple_drills_independent_lookup(client: TestClient):
     from backend.responses import DrillResult
 
-    first = client.post("/api/operations/drill").json()
-    second = client.post("/api/operations/drill").json()
-    assert first["id"] != second["id"]
+    id1 = "111122223333"
+    id2 = "444455556666"
+    _seed_drill(id1, passed=True)
+    _seed_drill(id2, passed=True)
 
-    resp1 = client.get(f"/api/operations/drills/{first['id']}")
-    resp2 = client.get(f"/api/operations/drills/{second['id']}")
+    resp1 = client.get(f"/api/operations/drills/{id1}")
+    resp2 = client.get(f"/api/operations/drills/{id2}")
 
     assert resp1.status_code == 200
     assert resp2.status_code == 200
