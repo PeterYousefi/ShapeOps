@@ -176,6 +176,7 @@ def test_main_cli_ready_only_flag():
             check_version=False,
             check_metrics=False,
             check_samples=False,
+            check_drills=False,
         )
 
 
@@ -359,6 +360,71 @@ def test_main_cli_check_samples_flag(capsys):
         assert "Samples   (/api/samples):" in captured.out
         assert "- bracket: Mounting bracket" in captured.out
         assert "- flange: Bearing flange" in captured.out
+
+
+def test_verify_service_with_drills_check():
+    def mock_fetch(url: str, timeout: float = 5.0):
+        if url.endswith("/api/health"):
+            return 200, {"status": "healthy"}
+        if url.endswith("/api/ready"):
+            return 200, {"ready": True}
+        if url.endswith("/api/operations"):
+            return 200, {
+                "active": "surface-rf-v1",
+                "drills": [
+                    {
+                        "id": "abc123def456",
+                        "at": 1700000000.0,
+                        "passed": True,
+                        "duration_ms": 4.2,
+                        "checks": [{"name": "Check 1", "passed": True}],
+                        "scope": "Isolated adapter test. No deployment or production mutation.",
+                    }
+                ],
+            }
+        return 404, {}
+
+    with patch.object(probe, "fetch_json", side_effect=mock_fetch):
+        report = probe.verify_service("http://mocked", check_drills=True)
+        assert report["healthy"] is True
+        assert report["ready"] is True
+        assert report["details"]["drills"]["ok"] is True
+        drills = report["details"]["drills"]["body"]["drills"]
+        assert len(drills) == 1
+        assert drills[0]["id"] == "abc123def456"
+
+
+def test_main_cli_check_drills_flag(capsys):
+    healthy_report = {
+        "base_url": "http://127.0.0.1:8000",
+        "healthy": True,
+        "ready": True,
+        "details": {
+            "health": {"ok": True, "status_code": 200, "body": {"status": "healthy"}},
+            "readiness": {"ok": True, "status_code": 200, "body": {"ready": True}},
+            "drills": {
+                "ok": True,
+                "body": {
+                    "drills": [
+                        {
+                            "id": "drill01",
+                            "passed": True,
+                            "duration_ms": 5.4,
+                            "checks": [{"name": "Injected adapter test", "passed": True}],
+                        }
+                    ]
+                },
+            },
+        },
+    }
+    with patch.object(probe, "verify_service", return_value=healthy_report):
+        code = probe.main(["--check-drills"])
+        assert code == 0
+        captured = capsys.readouterr()
+        assert "Drills    (/api/operations):" in captured.out
+        assert "Completed drills: 1" in captured.out
+        assert "Latest drill    : PASS (5.4ms, 1 checks)" in captured.out
+
 
 
 
