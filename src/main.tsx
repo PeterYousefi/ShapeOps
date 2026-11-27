@@ -2566,6 +2566,11 @@ function App() {
                         "/api/operations/drill",
                         "Isolated failure and recovery checks",
                       ],
+                      [
+                        "GET",
+                        "/api/operations/drills/{drill_id}",
+                        "Single incident recovery drill record lookup by ID",
+                      ],
                       ["GET", "/metrics", "Prometheus-compatible exposition"],
                     ].map(([method, path, text]) => (
                       <div className="endpoint" key={path}>
