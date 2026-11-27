@@ -51,6 +51,7 @@ def verify_service(
     check_version: bool = False,
     check_metrics: bool = False,
     check_samples: bool = False,
+    check_drills: bool = False,
 ) -> dict[str, Any]:
     """Execute operational health and readiness checks against a running ShapeOps server."""
     base = base_url.rstrip("/")
@@ -134,6 +135,19 @@ def verify_service(
         except ConnectionError as err:
             results["details"]["samples"] = {"error": str(err), "ok": False}
 
+    # 6. Optional drills probe
+    if check_drills:
+        try:
+            status, body = fetch_json(f"{base}/api/operations", timeout=timeout)
+            is_dict = status == 200 and isinstance(body, dict)
+            results["details"]["drills"] = {
+                "status_code": status,
+                "body": body,
+                "ok": is_dict and "drills" in body,
+            }
+        except ConnectionError as err:
+            results["details"]["drills"] = {"error": str(err), "ok": False}
+
     return results
 
 
@@ -173,6 +187,11 @@ def main(argv: list[str] | None = None) -> int:
         help="Inspect procedural reference CAD sample catalog (/api/samples)",
     )
     parser.add_argument(
+        "--check-drills",
+        action="store_true",
+        help="Inspect operations incident drills (/api/operations)",
+    )
+    parser.add_argument(
         "-q",
         "--quiet",
         action="store_true",
@@ -195,6 +214,7 @@ def main(argv: list[str] | None = None) -> int:
             check_version=args.check_version,
             check_metrics=args.check_metrics,
             check_samples=args.check_samples,
+            check_drills=args.check_drills,
         )
     except (ConnectionError, OSError, ValueError) as exc:
         if args.json_output:
@@ -249,6 +269,18 @@ def main(argv: list[str] | None = None) -> int:
             for item in s_list:
                 if isinstance(item, dict):
                     print(f"  - {item.get('id')}: {item.get('name')}")
+
+        d_details = report["details"].get("drills")
+        if isinstance(d_details, dict) and d_details.get("ok"):
+            d_body = d_details.get("body", {})
+            d_list = d_body.get("drills", [])
+            print("Drills    (/api/operations):")
+            print(f"  - Completed drills: {len(d_list)}")
+            if d_list:
+                latest = d_list[0]
+                stat = "PASS" if latest.get("passed") else "FAIL"
+                dur = latest.get("duration_ms", 0.0)
+                print(f"  - Latest drill    : {stat} ({dur:.1f}ms, {len(latest.get('checks', []))} checks)")
 
     if not is_ok:
         return 1
