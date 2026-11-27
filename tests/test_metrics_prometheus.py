@@ -12,11 +12,10 @@ def client():
 
 
 def test_metrics_exposes_quantiles_ood_rate_and_model_breakdown(client):
-    inference = client.post(
-        "/api/inference/sample",
-        json={"sample": "bracket", "model": "surface-rf-v1", "compare": False},
-    )
-    assert inference.status_code == 200
+    import uuid
+    from backend.app import record
+
+    record(uuid.uuid4().hex, "sample", "surface-rf-v1", True, 25.0, parse=5.0, execution=20.0, faces=10, confidence=0.95, ood=0)
 
     response = client.get("/metrics")
     assert response.status_code == 200
@@ -29,6 +28,8 @@ def test_metrics_exposes_quantiles_ood_rate_and_model_breakdown(client):
     assert "shapeops_registered_models_total 2" in body
     assert "# TYPE shapeops_cached_samples_total gauge" in body
     assert "shapeops_cached_samples_total 5" in body
+    assert "# TYPE shapeops_completed_drills_total gauge" in body
+    assert "shapeops_completed_drills_total " in body
     assert "# TYPE shapeops_process_uptime_seconds gauge" in body
     assert "shapeops_process_uptime_seconds " in body
     assert "# TYPE shapeops_inference_latency_p50_ms gauge" in body

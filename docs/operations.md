@@ -11,13 +11,14 @@ Actual inference failures are classified as validation errors or processing time
 
 ## Telemetry export and Prometheus exposition
 
-- `GET /metrics` exposes Prometheus-compatible gauges including process uptime (`shapeops_process_uptime_seconds`), registered model count (`shapeops_registered_models_total`), cached reference sample count (`shapeops_cached_samples_total`), request counts (`shapeops_inference_requests`), trailing-minute throughput (`shapeops_inference_throughput_per_minute`), latency quantiles (`shapeops_inference_latency_p50_ms`, `shapeops_inference_latency_p95_ms`), OOD rate (`shapeops_inference_ood_rate`), and per-model breakdowns (`shapeops_inference_requests_by_model`).
+- `GET /metrics` exposes Prometheus-compatible gauges including process uptime (`shapeops_process_uptime_seconds`), registered model count (`shapeops_registered_models_total`), cached reference sample count (`shapeops_cached_samples_total`), retained drill count (`shapeops_completed_drills_total`), request counts (`shapeops_inference_requests`), trailing-minute throughput (`shapeops_inference_throughput_per_minute`), latency quantiles (`shapeops_inference_latency_p50_ms`, `shapeops_inference_latency_p95_ms`), OOD rate (`shapeops_inference_ood_rate`), and per-model breakdowns (`shapeops_inference_requests_by_model`).
 - `GET /api/telemetry/requests/{trace_id}` enables operators to inspect an individual inference request record by its correlation or trace identifier without downloading bulk logs.
 - `GET /api/telemetry/export.csv?limit=500` downloads retained request telemetry as UTF-8 CSV (bounded 1–1,000 rows, `Cache-Control: no-store`) with spreadsheet formula-injection neutralization applied to string fields.
 
 ## Incident drill
 
 Operations → Run isolated incident drill. A broken in-memory adapter raises a controlled exception; the test records detection, executes the stable estimator on real sample descriptors and checks that the stable stage remains unchanged. Results and timing persist locally in SQLite. This test is bounded, never accepts arbitrary code, and never changes a cloud revision.
+- `GET /api/operations/drills/{drill_id}` enables operators to inspect individual drill execution records and component check results by drill identifier.
 
 ## Promotion and rollback
 

@@ -19,6 +19,10 @@ Prometheus exposition at `GET /metrics` also includes the `shapeops_process_upti
 
 OperationsResponse and DrillResult document the actual local-only state and isolated check results. Drill summaries must match their executed checks and validate before SQLite persistence. The current response contract allows no production release history and retains Not deployed status; promotion remains independently blocked with HTTP 403. This schema is not an implementation of authenticated administrative controls. Stored drill results are validated when read; corrupt/partial records fail instead of being silently filled with fabricated defaults. The old retention test fixture was updated to a complete, explicitly labeled unit drill record.
 
+Single drill record lookup at `GET /api/operations/drills/{drill_id}` retrieves the stored `DrillResult` for a specific 12-character hexadecimal drill identifier. The response contract exposes the timestamp `at`, overall boolean `passed`, structured `checks` array, execution `duration_ms`, and fixed scope statement. Unknown drill identifiers return HTTP 404 Not Found.
+
+Prometheus exposition at `GET /metrics` also exposes `shapeops_completed_drills_total` tracking retained incident drill executions in SQLite, alongside `shapeops_cached_samples_total` and `shapeops_process_uptime_seconds`.
+
 
 ## Model registry and completed training history
 

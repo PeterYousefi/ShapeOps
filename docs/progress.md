@@ -280,6 +280,21 @@ This increment delivers single sample catalog inspection, Prometheus cached-samp
 9. `docs/api-contracts.md` & `docs/operations.md`: Documented `SampleEntry` contract and `shapeops_cached_samples_total` gauge.
 10. `docs/progress.md`: Recorded delivery of sample catalog inspection and Prometheus sample metrics.
 
+## Incident drill lookup and operational metrics tooling
+
+This increment delivers single incident recovery drill inspection, Prometheus drill-count gauge exposition, and CLI health verification tooling:
+1. `backend/app.py`: Implemented `GET /api/operations/drills/{drill_id}` endpoint returning individual stored `DrillResult` schemas with 404 handling.
+2. `tests/test_drill_lookup.py`: Created unit and response contract test suite verifying drill lookup status codes, response schemas, and 404 behavior.
+3. `backend/app.py`: Added `shapeops_completed_drills_total` Prometheus gauge to `GET /metrics` tracking executed incident recovery drills retained in SQLite.
+4. `tests/test_metrics_prometheus.py`: Added tests asserting presence and value of `shapeops_completed_drills_total`.
+5. `scripts/verify_health.py`: Added `--check-drills` CLI flag enabling operators to inspect incident drill history and latest drill outcome.
+6. `tests/test_health_check_cli.py`: Added unit test coverage for `--check-drills` verification in the health check CLI.
+7. `src/main.tsx`: Surfaced `GET /api/operations/drills/{drill_id}` in the interactive documentation reference.
+8. `docs/api-contracts.md`: Documented `GET /api/operations/drills/{drill_id}` response contract and `shapeops_completed_drills_total` gauge.
+9. `docs/operations.md`: Documented drill inspection by identifier and Prometheus drill metric.
+10. `docs/progress.md`: Recorded delivery of incident drill lookup and operational metrics tooling.
+
+
 
 
 
