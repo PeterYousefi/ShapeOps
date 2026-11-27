@@ -638,6 +638,9 @@ def telemetry_csv(limit: int = Query(500, ge=1, le=1000)) -> Response:
 @app.get("/metrics")
 def metrics() -> Response:
     t = telemetry()
+    with connection() as db:
+        prune_records(db)
+        drill_count = int(db.execute("SELECT COUNT(*) FROM drills").fetchone()[0])
     lines = [
         "# HELP shapeops_inference_requests Observed inference requests in retained local window",
         "# TYPE shapeops_inference_requests gauge",
@@ -652,6 +655,9 @@ def metrics() -> Response:
         "# HELP shapeops_cached_samples_total Number of pre-computed CAD reference samples in memory",
         "# TYPE shapeops_cached_samples_total gauge",
         f"shapeops_cached_samples_total {len(getattr(app.state, 'samples', {}) or {})}",
+        "# HELP shapeops_completed_drills_total Number of executed incident recovery drills retained in SQLite",
+        "# TYPE shapeops_completed_drills_total gauge",
+        f"shapeops_completed_drills_total {drill_count}",
         "# HELP shapeops_process_uptime_seconds Total runtime in seconds since application initialization",
         "# TYPE shapeops_process_uptime_seconds gauge",
         f"shapeops_process_uptime_seconds {max(0.0, float(time.time() - APP_START_TIME)):.2f}",
