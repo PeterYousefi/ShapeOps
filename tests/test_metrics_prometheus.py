@@ -29,6 +29,8 @@ def test_metrics_exposes_quantiles_ood_rate_and_model_breakdown(client):
     assert "shapeops_registered_models_total 2" in body
     assert "# TYPE shapeops_cached_samples_total gauge" in body
     assert "shapeops_cached_samples_total 5" in body
+    assert "# TYPE shapeops_completed_drills_total gauge" in body
+    assert "shapeops_completed_drills_total " in body
     assert "# TYPE shapeops_process_uptime_seconds gauge" in body
     assert "shapeops_process_uptime_seconds " in body
     assert "# TYPE shapeops_inference_latency_p50_ms gauge" in body
